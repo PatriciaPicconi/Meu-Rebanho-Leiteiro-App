@@ -18,7 +18,6 @@ class TelaPrenhez extends StatefulWidget {
 class _TelaPrenhezState extends State<TelaPrenhez> {
   final TextEditingController _buscaController = TextEditingController();
   String _busca = "";
-
   Widget _botaoMenu(BuildContext context, IconData icone, String label, Color corIcone, Widget tela) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(

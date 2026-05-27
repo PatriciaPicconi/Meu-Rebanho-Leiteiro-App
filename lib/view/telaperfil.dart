@@ -8,6 +8,7 @@ import 'telatoque.dart';
 import 'telaprenhez.dart';
 import 'loja.dart';
 import 'tela_historico.dart';
+import 'tela_baixas.dart';
 
 class TelaPerfil extends StatefulWidget {
   const TelaPerfil({super.key});
@@ -24,12 +25,14 @@ class _TelaPerfilState extends State<TelaPerfil> {
 
   final TextEditingController _nomeController = TextEditingController();
   final TextEditingController _aniversarioController = TextEditingController();
+  final TextEditingController _telefoneController = TextEditingController();
   final TextEditingController _propriedadeController = TextEditingController();
 
   @override
   void dispose() {
     _nomeController.dispose();
     _aniversarioController.dispose();
+    _telefoneController.dispose();
     _propriedadeController.dispose();
     super.dispose();
   }
@@ -39,7 +42,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
     if (mounted) {
       Navigator.pushAndRemoveUntil(
         context,
-        MaterialPageRoute(builder: (context) => TelaLogin()),
+        MaterialPageRoute(builder: (context) => const TelaLogin()),
             (route) => false,
       );
     }
@@ -58,7 +61,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
           );
           Navigator.pushAndRemoveUntil(
             context,
-            MaterialPageRoute(builder: (context) => TelaLogin()),
+            MaterialPageRoute(builder: (context) => const TelaLogin()),
                 (route) => false,
           );
         }
@@ -142,14 +145,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
         children: [
           Icon(icone, color: corIcone, size: 22),
           const SizedBox(height: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 8,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
         ],
       ),
     );
@@ -161,10 +157,7 @@ class _TelaPerfilState extends State<TelaPerfil> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Meu Perfil",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-        ),
+        title: const Text("Meu Perfil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.brown,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -175,17 +168,16 @@ class _TelaPerfilState extends State<TelaPerfil> {
                 await _firestore.collection('usuarios').doc(usuarioLogado.uid).update({
                   'nome': _nomeController.text,
                   'aniversario': _aniversarioController.text,
+                  'telefone': _telefoneController.text,
                   'propriedade': _propriedadeController.text,
                 });
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Perfil updated com sucesso!')),
+                    const SnackBar(content: Text('Perfil atualizado com sucesso!')),
                   );
                 }
               }
-              setState(() {
-                _emEdicao = !_emEdicao;
-              });
+              setState(() => _emEdicao = !_emEdicao);
             },
           ),
         ],
@@ -195,10 +187,6 @@ class _TelaPerfilState extends State<TelaPerfil> {
           : StreamBuilder<DocumentSnapshot>(
         stream: _firestore.collection('usuarios').doc(usuarioLogado.uid).snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text("Erro ao carregar dados: ${snapshot.error}"));
-          }
-
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator(color: Colors.brown));
           }
@@ -206,123 +194,47 @@ class _TelaPerfilState extends State<TelaPerfil> {
           Map<String, dynamic> dados = {};
           if (snapshot.hasData && snapshot.data!.exists) {
             dados = snapshot.data!.data() as Map<String, dynamic>;
-          } else {
-            return const Center(
-              child: Padding(
-                padding: EdgeInsets.all(20.0),
-                child: Text(
-                  "Documento do usuário não foi encontrado no Firestore.",
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            );
-          }
-
-          if (!_emEdicao) {
-            _nomeController.text = dados['nome'] ?? '';
-            _aniversarioController.text = dados['aniversario'] ?? '';
-            _propriedadeController.text = dados['propriedade'] ?? '';
+            if (!_emEdicao) {
+              _nomeController.text = dados['nome'] ?? '';
+              _aniversarioController.text = dados['aniversario'] ?? '';
+              _telefoneController.text = dados['telefone'] ?? '';
+              _propriedadeController.text = dados['propriedade'] ?? '';
+            }
           }
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(20.0),
             child: Column(
               children: [
-                const SizedBox(height: 10),
-                Center(
-                  child: Stack(
-                    children: [
-                      CircleAvatar(
-                        radius: 65,
-                        backgroundColor: Colors.brown.shade100,
-                        backgroundImage: NetworkImage(
-                          dados['foto_url'] ?? 'https://via.placeholder.com/150',
-                        ),
-                      ),
-                      if (_emEdicao)
-                        Positioned(
-                          bottom: 0,
-                          right: 0,
-                          child: CircleAvatar(
-                            backgroundColor: Colors.brown,
-                            radius: 20,
-                            child: IconButton(
-                              icon: const Icon(Icons.camera_alt, size: 18, color: Colors.white),
-                              onPressed: () {},
-                            ),
-                          ),
-                        ),
-                    ],
-                  ),
-                ),
+                CircleAvatar(radius: 65, backgroundImage: NetworkImage(dados['foto_url'] ?? 'https://via.placeholder.com/150')),
                 const SizedBox(height: 30),
-                _construirCampoCadastral(
-                  rotulo: "Nome do Produtor",
-                  controlador: _nomeController,
-                  habilitado: _emEdicao,
-                  icone: Icons.person,
-                ),
-                _construirCampoCadastral(
-                  rotulo: "E-mail de Cadastro",
-                  controlador: TextEditingController(text: usuarioLogado.email),
-                  habilitado: false,
-                  icone: Icons.email,
-                ),
+                _construirCampoCadastral(rotulo: "Nome Completo", controlador: _nomeController, habilitado: _emEdicao, icone: Icons.person),
+                _construirCampoCadastral(rotulo: "E-mail de Cadastro", controlador: TextEditingController(text: usuarioLogado.email), habilitado: false, icone: Icons.email),
                 GestureDetector(
                   onTap: () => _selecionarData(context),
                   child: AbsorbPointer(
-                    absorbing: _emEdicao,
-                    child: _construirCampoCadastral(
-                      rotulo: "Data de Aniversário",
-                      controlador: _aniversarioController,
-                      habilitado: false,
-                      icone: Icons.cake,
-                    ),
+                    absorbing: !_emEdicao,
+                    child: _construirCampoCadastral(rotulo: "Data de Aniversário", controlador: _aniversarioController, habilitado: false, icone: Icons.cake),
                   ),
                 ),
-                _construirCampoCadastral(
-                  rotulo: "Nome da Propriedade / Sítio / Fazenda",
-                  controlador: _propriedadeController,
-                  habilitado: _emEdicao,
-                  icone: Icons.gite,
-                ),
-                const SizedBox(height: 30),
-                const Divider(),
-                const SizedBox(height: 15),
+                _construirCampoCadastral(rotulo: "Telefone / Whatsapp", controlador: _telefoneController, habilitado: _emEdicao, icone: Icons.phone, teclado: TextInputType.phone),
+                _construirCampoCadastral(rotulo: "Nome da Propriedade", controlador: _propriedadeController, habilitado: _emEdicao, icone: Icons.gite),
+                const SizedBox(height: 40),
                 SizedBox(
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton.icon(
-                    style: OutlinedButton.styleFrom(
-                      side: const BorderSide(color: Colors.brown),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    ),
                     icon: const Icon(Icons.logout, color: Colors.brown),
                     label: const Text("SAIR DA CONTA", style: TextStyle(color: Colors.brown, fontWeight: FontWeight.bold)),
-                    onPressed: () => _mostrarAlertaConfirmacao(
-                      titulo: "Sair do Aplicativo",
-                      mensagem: "Tem certeza que deseja encerrar a sessão?",
-                      onConfirmar: _fazerLogout,
-                    ),
+                    onPressed: () => _mostrarAlertaConfirmacao(titulo: "Sair", mensagem: "Encerrar sessão?", onConfirmar: _fazerLogout),
                   ),
                 ),
                 const SizedBox(height: 15),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: TextButton.icon(
-                    style: TextButton.styleFrom(
-                      foregroundColor: Colors.red,
-                    ),
-                    icon: const Icon(Icons.delete_forever),
-                    label: const Text("APAGAR MEU PERFIL DEFINITIVAMENTE", style: TextStyle(fontWeight: FontWeight.bold)),
-                    onPressed: () => _mostrarAlertaConfirmacao(
-                      titulo: "EXCLUIR CONTA?",
-                      mensagem: "Atenção! Esta ação é irreversível. Deseja continuar?",
-                      ePerigoso: true,
-                      onConfirmar: _deletarConta,
-                    ),
-                  ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(foregroundColor: Colors.red),
+                  icon: const Icon(Icons.delete_forever),
+                  label: const Text("APAGAR PERFIL DEFINITIVAMENTE"),
+                  onPressed: () => _mostrarAlertaConfirmacao(titulo: "Excluir", mensagem: "Atenção! Ação irreversível.", ePerigoso: true, onConfirmar: _deletarConta),
                 ),
               ],
             ),
@@ -362,22 +274,10 @@ class _TelaPerfilState extends State<TelaPerfil> {
         controller: controlador,
         enabled: habilitado,
         keyboardType: teclado,
-        style: TextStyle(
-          color: habilitado ? Colors.black : Colors.black54,
-          fontWeight: habilitado ? FontWeight.normal : FontWeight.bold,
-        ),
         decoration: InputDecoration(
           labelText: rotulo,
-          labelStyle: const TextStyle(color: Colors.brown),
           prefixIcon: Icon(icone, color: Colors.brown),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-          disabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(10),
-            borderSide: BorderSide(color: Colors.grey.shade300),
-          ),
-          focusedBorder: const OutlineInputBorder(
-            borderSide: BorderSide(color: Colors.brown, width: 2),
-          ),
         ),
       ),
     );

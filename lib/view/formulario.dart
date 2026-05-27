@@ -91,7 +91,6 @@ class _FormularioState extends State<Formulario> {
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Center(
               child: Icon(Icons.agriculture, size: 70, color: Colors.green),

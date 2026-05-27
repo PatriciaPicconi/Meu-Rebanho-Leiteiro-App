@@ -186,7 +186,6 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   ],
                 ),
                 const SizedBox(height: 35),
-                _gerarSugestaoDescarte(producaoMedia, partosFalhos),
                 const SizedBox(height: 20),
               ],
             ),

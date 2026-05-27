@@ -8,6 +8,7 @@ class TelaConsulta extends StatelessWidget {
     return Scaffold(
       appBar: AppBar(
         title: const Text("Consulta"),
+        backgroundColor: Colors.green,
       ),
       body: const Center(
         child: Text("Tela de Consulta"),

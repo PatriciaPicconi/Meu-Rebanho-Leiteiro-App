@@ -8,7 +8,6 @@ import 'tela_baixas.dart';
 
 class Loja extends StatelessWidget {
   const Loja({super.key});
-
   Widget _botaoMenu(BuildContext context, IconData icone, String label, Color corIcone, Widget tela) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(
@@ -39,7 +38,6 @@ class Loja extends StatelessWidget {
       appBar: AppBar(
         title: const Text("Loja Agro", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.purple,
-        automaticallyImplyLeading: false,
       ),
       body: const Center(
         child: Text("Produtos e insumos para o rebanho aparecerão aqui."),

@@ -32,7 +32,6 @@ class _TelaVacaState extends State<TelaVaca> {
     filter: {"#": RegExp(r'[0-9]')},
     type: MaskAutoCompletionType.lazy,
   );
-
   Widget _botaoMenu(BuildContext context, IconData icone, String label, Color corIcone, Widget tela) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(

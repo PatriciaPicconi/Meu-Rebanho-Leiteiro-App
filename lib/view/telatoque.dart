@@ -40,10 +40,7 @@ class _TelaToqueState extends State<TelaToque> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Meu Rebanho Leiteiro",
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text("Meu Rebanho Leiteiro", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
@@ -82,8 +79,9 @@ class _TelaToqueState extends State<TelaToque> {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
           final documentos = snapshot.data!.docs.where((doc) {
-            final nome = (doc['nome'] ?? "").toString().toLowerCase();
-            final brinco = (doc['brinco'] ?? "").toString();
+            final data = doc.data() as Map<String, dynamic>;
+            final nome = (data['nome'] ?? "").toString().toLowerCase();
+            final brinco = (data['brinco'] ?? "").toString();
             return nome.contains(_busca) || brinco.contains(_busca);
           }).toList();
 

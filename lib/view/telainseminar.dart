@@ -7,7 +7,6 @@ import 'telaprenhez.dart';
 import 'loja.dart';
 import 'tela_historico.dart';
 import 'tela_baixas.dart';
-
 class TelaInseminar extends StatefulWidget {
   const TelaInseminar({super.key});
 
@@ -21,10 +20,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
 
   Widget _botaoMenu(BuildContext context, IconData icone, String label, Color corIcone, Widget tela) {
     return TextButton(
-      onPressed: () => Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => tela),
-      ),
+      onPressed: () => Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => tela)),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -44,12 +40,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
         backgroundColor: Colors.blue,
         automaticallyImplyLeading: false,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.person, color: Colors.white),
-            onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaPerfil()));
-            },
-          ),
+          IconButton(icon: const Icon(Icons.person, color: Colors.white), onPressed: () => Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaPerfil()))),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
@@ -58,13 +49,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
             child: TextField(
               controller: _buscaController,
               onChanged: (value) => setState(() => _filtro = value.toLowerCase()),
-              decoration: InputDecoration(
-                hintText: "Pesquisar por nome ou brinco...",
-                prefixIcon: const Icon(Icons.search),
-                fillColor: Colors.white,
-                filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-              ),
+              decoration: InputDecoration(hintText: "Pesquisar...", prefixIcon: const Icon(Icons.search), fillColor: Colors.white, filled: true, border: OutlineInputBorder(borderRadius: BorderRadius.circular(10))),
             ),
           ),
         ),
@@ -76,9 +61,8 @@ class _TelaInseminarState extends State<TelaInseminar> {
           if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
 
           final documentos = snapshot.data!.docs.where((doc) {
-            final nome = doc['nome'].toString().toLowerCase();
-            final brinco = doc['brinco'].toString().toLowerCase();
-            return nome.contains(_filtro) || brinco.contains(_filtro);
+            final data = doc.data() as Map<String, dynamic>;
+            return data['nome'].toString().toLowerCase().contains(_filtro) || data['brinco'].toString().toLowerCase().contains(_filtro);
           }).toList();
 
           return ListView.builder(
@@ -86,23 +70,10 @@ class _TelaInseminarState extends State<TelaInseminar> {
             itemBuilder: (context, index) {
               final vaca = documentos[index].data() as Map<String, dynamic>;
               return ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: Colors.blue,
-                  child: Icon(Icons.vaccines, color: Colors.white),
-                ),
+                leading: const CircleAvatar(backgroundColor: Colors.blue, child: Icon(Icons.vaccines, color: Colors.white)),
                 title: Text(vaca['nome'] ?? 'Sem nome', style: const TextStyle(fontWeight: FontWeight.bold)),
                 subtitle: Text("Brinco: ${vaca['brinco'] ?? 'S/N'}"),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-                onTap: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => FormularioInseminar(
-                        brincoInicial: vaca['brinco']?.toString() ?? "",
-                      ),
-                    ),
-                  );
-                },
+                onTap: () => Navigator.push(context, MaterialPageRoute(builder: (context) => FormularioInseminar(brincoInicial: vaca['brinco']?.toString() ?? ""))),
               );
             },
           );
@@ -113,7 +84,6 @@ class _TelaInseminarState extends State<TelaInseminar> {
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _botaoMenu(context, Icons.agriculture, "VACAS", Colors.greenAccent, const TelaVaca()),
               _botaoMenu(context, Icons.front_hand, "TOQUE", Colors.orange, const TelaToque()),
@@ -129,6 +99,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
   }
 }
 
+// --- FORMULÁRIO DE REGISTRO ---
 class FormularioInseminar extends StatefulWidget {
   final String brincoInicial;
   const FormularioInseminar({super.key, this.brincoInicial = ""});
@@ -138,86 +109,39 @@ class FormularioInseminar extends StatefulWidget {
 }
 
 class _FormularioInseminarState extends State<FormularioInseminar> {
-  late TextEditingController _brincoController;
+  final _brincoController = TextEditingController();
   final _dataCioController = TextEditingController();
   final _touroController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _brincoController = TextEditingController(text: widget.brincoInicial);
+    _brincoController.text = widget.brincoInicial;
   }
 
-  @override
-  void dispose() {
-    _brincoController.dispose();
-    _dataCioController.dispose();
-    _touroController.dispose();
-    super.dispose();
-  }
-
-  void _salvarInseminacao() async {
-    try {
-      await FirebaseFirestore.instance.collection('inseminacoes').add({
-        'brinco': _brincoController.text,
-        'dataCio': _dataCioController.text,
-        'touro': _touroController.text,
-        'dataRegistro': FieldValue.serverTimestamp(),
-      });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Inseminação registrada com sucesso!")),
-      );
-      Navigator.pop(context);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erro ao salvar: $e")),
-      );
-    }
+  void _salvar() async {
+    await FirebaseFirestore.instance.collection('inseminacoes').add({
+      'brinco': _brincoController.text,
+      'data': _dataCioController.text,
+      'touro': _touroController.text,
+      'timestamp': FieldValue.serverTimestamp(),
+    });
+    if (mounted) Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text("Registrar Procedimento", style: TextStyle(color: Colors.white)),
-        backgroundColor: Colors.green,
-        iconTheme: const IconThemeData(color: Colors.white),
-      ),
-      body: SingleChildScrollView(
+      appBar: AppBar(title: const Text("Registrar Inseminação"), backgroundColor: Colors.blue),
+      body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Center(child: Icon(Icons.vaccines, size: 80, color: Colors.blue)),
+            TextField(controller: _brincoController, decoration: const InputDecoration(labelText: "Brinco")),
+            TextField(controller: _dataCioController, decoration: const InputDecoration(labelText: "Data")),
+            TextField(controller: _touroController, decoration: const InputDecoration(labelText: "Touro")),
             const SizedBox(height: 20),
-            const Text("Dados do Animal", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _brincoController,
-              decoration: const InputDecoration(labelText: "Número do Brinco", border: OutlineInputBorder(), prefixIcon: Icon(Icons.numbers)),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: _dataCioController,
-              decoration: const InputDecoration(labelText: "Data do Cio (DD/MM/AAAA)", border: OutlineInputBorder(), prefixIcon: Icon(Icons.calendar_today)),
-            ),
-            const SizedBox(height: 15),
-            TextField(
-              controller: _touroController,
-              decoration: const InputDecoration(labelText: "Touro (Sêmen)", border: OutlineInputBorder(), prefixIcon: Icon(Icons.pets)),
-            ),
-            const SizedBox(height: 30),
-            ElevatedButton(
-              onPressed: _salvarInseminacao,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                minimumSize: const Size(double.infinity, 55),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text("SALVAR REGISTRO", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            ),
+            ElevatedButton(onPressed: _salvar, child: const Text("SALVAR")),
           ],
         ),
       ),

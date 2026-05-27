@@ -63,7 +63,7 @@ class MenuPrincipal extends StatelessWidget {
           boxShadow: const [
             BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))
           ],
-          border: Border.all(color: cor.withOpacity(0.5), width: 2),
+          border: Border.all(color: cor.withValues(alpha: 0.5), width: 2),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

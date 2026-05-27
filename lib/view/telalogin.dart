@@ -37,19 +37,19 @@ class TelaLogin extends StatelessWidget {
               onPressed: () {
                 Navigator.push(
                   context,
-                  MaterialPageRoute(builder: (context) => RecuperarSenha()),
+                  MaterialPageRoute(builder: (context) => const RecuperarSenha()),
                 );
               },
             ),
             const SizedBox(height: 30),
             ElevatedButton(
-              child: const Text("ENTRAR"),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(builder: (context) => const MenuPrincipal()),
                 );
               },
+              child: const Text("ENTRAR"),
             ),
           ],
         ),
