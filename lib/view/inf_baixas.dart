@@ -128,9 +128,10 @@ class _InfBaixasState extends State<InfBaixas> {
         enabled: habilitado,
         maxLines: linhasMaximas,
         style: TextStyle(
-            fontSize: 16,
-            color: habilitado ? Colors.black : Colors.black87,
-            fontWeight: habilitado ? FontWeight.normal : FontWeight.bold),
+          fontSize: 16,
+          color: habilitado ? Colors.black : Colors.black87,
+          fontWeight: habilitado ? FontWeight.normal : FontWeight.bold,
+        ),
         decoration: InputDecoration(
           labelText: rotulo,
           labelStyle: const TextStyle(color: Colors.brown),

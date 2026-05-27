@@ -115,7 +115,6 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   ),
                 ),
                 const Divider(height: 40),
-
                 const Text("Genealogia / Pais:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
                 const SizedBox(height: 5),
                 TextField(
@@ -129,7 +128,6 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   },
                 ),
                 const SizedBox(height: 20),
-
                 const Text("Histórico de Filhos (Vindo da Prenhez):", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
                 const SizedBox(height: 5),
                 Text(
@@ -137,7 +135,6 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   style: const TextStyle(fontSize: 15, fontStyle: FontStyle.italic),
                 ),
                 const SizedBox(height: 20),
-
                 const Text("Produção de Leite Deste Mês (Litros):", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
                 const SizedBox(height: 5),
                 TextField(
@@ -152,7 +149,6 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   },
                 ),
                 const SizedBox(height: 20),
-
                 const Text("Área de Observações:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
                 const SizedBox(height: 5),
                 TextField(
@@ -164,7 +160,6 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   },
                 ),
                 const SizedBox(height: 30),
-
                 const Text("Gráfico de Índices Zootécnicos:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
                 const SizedBox(height: 15),
                 SizedBox(
@@ -182,7 +177,6 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   ),
                 ),
                 const SizedBox(height: 15),
-
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
@@ -192,8 +186,6 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   ],
                 ),
                 const SizedBox(height: 35),
-
-                _gerarSugestaoDescarte(producaoMedia, partosFalhos),
                 const SizedBox(height: 20),
               ],
             ),

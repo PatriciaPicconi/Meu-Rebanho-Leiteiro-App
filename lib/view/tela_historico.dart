@@ -102,7 +102,7 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                 }).toList();
 
                 if (docsFiltrados.isEmpty) {
-                  return const Center(child: Text("Nenhum gado corresponde à busca."));
+                  return const Center(child: Text("Nenhum gado corresponds à busca."));
                 }
 
                 return ListView.builder(

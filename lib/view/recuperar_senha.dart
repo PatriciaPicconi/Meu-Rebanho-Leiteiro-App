@@ -3,31 +3,33 @@ import 'package:flutter/services.dart';
 import 'nova_senha.dart';
 
 class RecuperarSenha extends StatelessWidget {
+  const RecuperarSenha({super.key});
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text("Meu Rebanho Leiteiro"),
+        title: const Text("Meu Rebanho Leiteiro"),
         backgroundColor: Colors.green,
       ),
       body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
+        padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            SizedBox(height: 40),
-            Text(
+            const SizedBox(height: 40),
+            const Text(
               "Enviaremos um código de acesso para o seu E-mail",
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500),
             ),
-            SizedBox(height: 30),
-            Container(
+            const SizedBox(height: 30),
+            SizedBox(
               width: 200,
               child: TextField(
                 textAlign: TextAlign.center,
                 keyboardType: TextInputType.number,
-                style: TextStyle(fontSize: 24, letterSpacing: 10),
-                decoration: InputDecoration(
+                style: const TextStyle(fontSize: 24, letterSpacing: 10),
+                decoration: const InputDecoration(
                   labelText: "Código",
                   hintText: "000000",
                   border: OutlineInputBorder(),
@@ -38,26 +40,26 @@ class RecuperarSenha extends StatelessWidget {
                 ],
               ),
             ),
-            SizedBox(height: 40),
+            const SizedBox(height: 40),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-                  child: Text("CANCELAR", style: TextStyle(color: Colors.white)),
                   onPressed: () {
                     Navigator.pop(context);
                   },
+                  child: const Text("CANCELAR", style: TextStyle(color: Colors.white)),
                 ),
                 ElevatedButton(
                   style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                  child: Text("ALTERAR", style: TextStyle(color: Colors.white)),
                   onPressed: () {
                     Navigator.push(
                       context,
                       MaterialPageRoute(builder: (context) => NovaSenha()),
                     );
                   },
+                  child: const Text("ALTERAR", style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
