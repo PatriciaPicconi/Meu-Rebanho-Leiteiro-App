@@ -2,13 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'telalogin.dart';
-import 'telavaca.dart';
-import 'telainseminar.dart';
-import 'telatoque.dart';
-import 'telaprenhez.dart';
-import 'loja.dart';
-import 'tela_historico.dart';
-import 'tela_baixas.dart';
 
 class TelaPerfil extends StatefulWidget {
   const TelaPerfil({super.key});
@@ -18,267 +11,587 @@ class TelaPerfil extends StatefulWidget {
 }
 
 class _TelaPerfilState extends State<TelaPerfil> {
-  final _auth = FirebaseAuth.instance;
-  final _firestore = FirebaseFirestore.instance;
+  final _formKey = GlobalKey<FormState>();
 
-  bool _emEdicao = false;
+  final _nomeController = TextEditingController();
+  final _dataNascimentoController = TextEditingController();
+  final _propriedadeController = TextEditingController();
+  final _cidadeController = TextEditingController();
+  final _estadoController = TextEditingController();
 
-  final TextEditingController _nomeController = TextEditingController();
-  final TextEditingController _aniversarioController = TextEditingController();
-  final TextEditingController _telefoneController = TextEditingController();
-  final TextEditingController _propriedadeController = TextEditingController();
+  String _tipoUsuario = "Produtor Rural";
+  bool _modoEdicao = false;
+  bool _carregando = false;
 
   @override
   void dispose() {
     _nomeController.dispose();
-    _aniversarioController.dispose();
-    _telefoneController.dispose();
+    _dataNascimentoController.dispose();
     _propriedadeController.dispose();
+    _cidadeController.dispose();
+    _estadoController.dispose();
     super.dispose();
   }
 
-  void _fazerLogout() async {
-    await _auth.signOut();
-    if (mounted) {
+  Future<void> _selecionarDataNascimento() async {
+    if (!_modoEdicao) return;
+
+    final DateTime? dataSelecionada = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000),
+      firstDate: DateTime(1930),
+      lastDate: DateTime.now(),
+    );
+
+    if (dataSelecionada != null) {
+      setState(() {
+        _dataNascimentoController.text =
+        "${dataSelecionada.day.toString().padLeft(2, '0')}/"
+            "${dataSelecionada.month.toString().padLeft(2, '0')}/"
+            "${dataSelecionada.year}";
+      });
+    }
+  }
+
+  Future<void> _salvarPerfil() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Nenhum usuário autenticado."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() {
+      _carregando = true;
+    });
+
+    try {
+      await FirebaseFirestore.instance.collection('usuarios').doc(usuario.uid).update({
+        'nome': _nomeController.text.trim(),
+        'dataNascimento': _dataNascimentoController.text.trim(),
+        'propriedade': _propriedadeController.text.trim(),
+        'cidade': _cidadeController.text.trim(),
+        'estado': _estadoController.text.trim().toUpperCase(),
+        'tipoUsuario': _tipoUsuario,
+        'dataAtualizacao': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      setState(() {
+        _modoEdicao = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Perfil atualizado com sucesso!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Erro ao atualizar perfil: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _carregando = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _sairDaConta() async {
+    await FirebaseAuth.instance.signOut();
+
+    if (!mounted) return;
+
+    Navigator.pushAndRemoveUntil(
+      context,
+      MaterialPageRoute(builder: (context) => const TelaLogin()),
+          (route) => false,
+    );
+  }
+
+  Future<void> _excluirConta() async {
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) return;
+
+    try {
+      await FirebaseFirestore.instance.collection('usuarios').doc(usuario.uid).delete();
+      await usuario.delete();
+
+      if (!mounted) return;
+
       Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => const TelaLogin()),
             (route) => false,
       );
-    }
-  }
-
-  void _deletarConta() async {
-    try {
-      User? usuarioAtual = _auth.currentUser;
-      if (usuarioAtual != null) {
-        await _firestore.collection('usuarios').doc(usuarioAtual.uid).delete();
-        await usuarioAtual.delete();
-
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Sua conta foi apagada permanentemente.')),
-          );
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => const TelaLogin()),
-                (route) => false,
-          );
-        }
-      }
     } catch (e) {
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro ao apagar conta: Reautenticação necessária.')),
+        const SnackBar(
+          content: Text(
+            "Não foi possível excluir a conta. Faça login novamente e tente outra vez.",
+          ),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
 
-  Future<void> _selecionarData(BuildContext context) async {
-    if (!_emEdicao) return;
-
-    final DateTime? selecionada = await showDatePicker(
-      context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(1930),
-      lastDate: DateTime.now(),
-      builder: (context, child) {
-        return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: Colors.brown,
-              onPrimary: Colors.white,
-              onSurface: Colors.black,
-            ),
-          ),
-          child: child!,
-        );
-      },
-    );
-
-    if (selecionada != null) {
-      setState(() {
-        _aniversarioController.text =
-        "${selecionada.day.toString().padLeft(2, '0')}/${selecionada.month.toString().padLeft(2, '0')}/${selecionada.year}";
-      });
-    }
-  }
-
-  void _mostrarAlertaConfirmacao({
+  void _confirmarAcao({
     required String titulo,
     required String mensagem,
-    required VoidCallback onConfirmar,
-    bool ePerigoso = false,
+    required VoidCallback aoConfirmar,
+    bool perigoso = false,
   }) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        title: Text(titulo, style: const TextStyle(fontWeight: FontWeight.bold)),
-        content: Text(mensagem),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text("Cancelar", style: TextStyle(color: Colors.grey)),
-          ),
-          TextButton(
-            onPressed: () {
-              Navigator.pop(context);
-              onConfirmar();
-            },
-            child: Text(
-              "Confirmar",
-              style: TextStyle(color: ePerigoso ? Colors.red : Colors.brown, fontWeight: FontWeight.bold),
+      builder: (context) {
+        return AlertDialog(
+          title: Text(titulo),
+          content: Text(mensagem),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Cancelar"),
             ),
-          ),
-        ],
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: perigoso ? Colors.red : Colors.green,
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+                aoConfirmar();
+              },
+              child: const Text(
+                "Confirmar",
+                style: TextStyle(color: Colors.white),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _preencherCampos(Map<String, dynamic> dados) {
+    _nomeController.text = dados['nome'] ?? '';
+    _dataNascimentoController.text = dados['dataNascimento'] ?? '';
+    _propriedadeController.text = dados['propriedade'] ?? '';
+    _cidadeController.text = dados['cidade'] ?? '';
+    _estadoController.text = dados['estado'] ?? '';
+    _tipoUsuario = dados['tipoUsuario'] ?? 'Produtor Rural';
+  }
+
+  InputDecoration _decoracaoCampo(String label, IconData icone) {
+    return InputDecoration(
+      labelText: label,
+      prefixIcon: Icon(icone, color: Colors.green),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      disabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: Colors.grey.shade300),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: Colors.green, width: 2),
+      ),
+      filled: !_modoEdicao,
+      fillColor: _modoEdicao ? Colors.white : Colors.grey.shade100,
+    );
+  }
+
+  String? _validarCampoObrigatorio(String? valor) {
+    if (valor == null || valor.trim().isEmpty) {
+      return "Campo obrigatório";
+    }
+    return null;
+  }
+
+  Widget _campoTexto({
+    required TextEditingController controller,
+    required String label,
+    required IconData icone,
+    bool obrigatorio = true,
+    bool somenteLeitura = false,
+    int? maxLength,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextFormField(
+        controller: controller,
+        enabled: _modoEdicao && !somenteLeitura,
+        readOnly: somenteLeitura,
+        maxLength: maxLength,
+        textCapitalization: label == "Estado"
+            ? TextCapitalization.characters
+            : TextCapitalization.sentences,
+        decoration: _decoracaoCampo(label, icone).copyWith(
+          counterText: "",
+        ),
+        validator: obrigatorio ? _validarCampoObrigatorio : null,
       ),
     );
   }
 
-  Widget _botaoMenu(BuildContext context, IconData icone, String label, Color corIcone, Widget tela) {
-    return TextButton(
-      onPressed: () => Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => tela),
+  Widget _campoEmail(String email) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextFormField(
+        initialValue: email,
+        enabled: false,
+        decoration: _decoracaoCampo("E-mail", Icons.email),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icone, color: corIcone, size: 22),
-          const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+    );
+  }
+
+  Widget _cabecalhoPerfil(Map<String, dynamic> dados) {
+    final nome = dados['nome'] ?? 'Usuário';
+    final propriedade = dados['propriedade'] ?? 'Propriedade não informada';
+
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        Stack(
+          alignment: Alignment.bottomRight,
+          children: [
+            CircleAvatar(
+              radius: 62,
+              backgroundColor: Colors.green.shade100,
+              child: const Icon(
+                Icons.person,
+                size: 82,
+                color: Colors.green,
+              ),
+            ),
+            CircleAvatar(
+              radius: 20,
+              backgroundColor: Colors.green,
+              child: IconButton(
+                icon: const Icon(
+                  Icons.camera_alt,
+                  color: Colors.white,
+                  size: 18,
+                ),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text("Foto de perfil será implementada futuramente."),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        Text(
+          nome,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 23,
+            fontWeight: FontWeight.bold,
+            color: Colors.black87,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          propriedade,
+          textAlign: TextAlign.center,
+          style: const TextStyle(
+            fontSize: 14,
+            color: Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+          decoration: BoxDecoration(
+            color: Colors.green.shade100,
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Text(
+            _tipoUsuario,
+            style: const TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _formularioPerfil(User usuario) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 6,
+            offset: Offset(0, 3),
+          ),
         ],
       ),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          children: [
+            _campoTexto(
+              controller: _nomeController,
+              label: "Nome",
+              icone: Icons.person,
+            ),
+            GestureDetector(
+              onTap: _selecionarDataNascimento,
+              child: AbsorbPointer(
+                child: _campoTexto(
+                  controller: _dataNascimentoController,
+                  label: "Data de nascimento",
+                  icone: Icons.calendar_month,
+                  somenteLeitura: true,
+                ),
+              ),
+            ),
+            _campoEmail(usuario.email ?? ''),
+            _campoTexto(
+              controller: _propriedadeController,
+              label: "Propriedade",
+              icone: Icons.home_work,
+            ),
+            _campoTexto(
+              controller: _cidadeController,
+              label: "Cidade",
+              icone: Icons.location_city,
+            ),
+            _campoTexto(
+              controller: _estadoController,
+              label: "Estado",
+              icone: Icons.map,
+              maxLength: 2,
+            ),
+            DropdownButtonFormField<String>(
+              value: _tipoUsuario,
+              decoration: _decoracaoCampo("Tipo de usuário", Icons.badge),
+              items: const [
+                DropdownMenuItem(
+                  value: "Produtor Rural",
+                  child: Text("Produtor Rural"),
+                ),
+                DropdownMenuItem(
+                  value: "Funcionário",
+                  child: Text("Funcionário"),
+                ),
+                DropdownMenuItem(
+                  value: "Técnico Veterinário",
+                  child: Text("Técnico Veterinário"),
+                ),
+                DropdownMenuItem(
+                  value: "Administrador",
+                  child: Text("Administrador"),
+                ),
+              ],
+              onChanged: _modoEdicao
+                  ? (valor) {
+                if (valor != null) {
+                  setState(() {
+                    _tipoUsuario = valor;
+                  });
+                }
+              }
+                  : null,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _botoesAcao() {
+    return Column(
+      children: [
+        if (_modoEdicao)
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              icon: _carregando
+                  ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2,
+                ),
+              )
+                  : const Icon(Icons.save, color: Colors.white),
+              label: const Text(
+                "SALVAR ALTERAÇÕES",
+                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+              ),
+              onPressed: _carregando ? null : _salvarPerfil,
+            ),
+          ),
+        const SizedBox(height: 12),
+        SizedBox(
+          width: double.infinity,
+          height: 48,
+          child: OutlinedButton.icon(
+            style: OutlinedButton.styleFrom(
+              side: const BorderSide(color: Colors.green),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            icon: const Icon(Icons.logout, color: Colors.green),
+            label: const Text(
+              "SAIR DA CONTA",
+              style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+            ),
+            onPressed: () {
+              _confirmarAcao(
+                titulo: "Sair da conta",
+                mensagem: "Deseja realmente sair do aplicativo?",
+                aoConfirmar: _sairDaConta,
+              );
+            },
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextButton.icon(
+          icon: const Icon(Icons.delete_forever, color: Colors.red),
+          label: const Text(
+            "EXCLUIR CONTA",
+            style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+          ),
+          onPressed: () {
+            _confirmarAcao(
+              titulo: "Excluir conta",
+              mensagem:
+              "Esta ação é permanente. Os dados do perfil serão removidos. Deseja continuar?",
+              perigoso: true,
+              aoConfirmar: _excluirConta,
+            );
+          },
+        ),
+      ],
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    User? usuarioLogado = _auth.currentUser;
+    final usuario = FirebaseAuth.instance.currentUser;
+
+    if (usuario == null) {
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text("Perfil"),
+          backgroundColor: Colors.green,
+        ),
+        body: const Center(
+          child: Text("Nenhum usuário autenticado."),
+        ),
+      );
+    }
 
     return Scaffold(
+      backgroundColor: const Color(0xFFEAF3E8),
       appBar: AppBar(
-        title: const Text("Meu Perfil", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-        backgroundColor: Colors.brown,
+        backgroundColor: Colors.green,
         iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text(
+          "Perfil do Usuário",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+        ),
         actions: [
           IconButton(
-            icon: Icon(_emEdicao ? Icons.check : Icons.edit, color: Colors.white),
-            onPressed: () async {
-              if (_emEdicao && usuarioLogado != null) {
-                await _firestore.collection('usuarios').doc(usuarioLogado.uid).update({
-                  'nome': _nomeController.text,
-                  'aniversario': _aniversarioController.text,
-                  'telefone': _telefoneController.text,
-                  'propriedade': _propriedadeController.text,
-                });
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Perfil atualizado com sucesso!')),
-                  );
-                }
-              }
-              setState(() => _emEdicao = !_emEdicao);
+            icon: Icon(
+              _modoEdicao ? Icons.close : Icons.edit,
+              color: Colors.white,
+            ),
+            onPressed: () {
+              setState(() {
+                _modoEdicao = !_modoEdicao;
+              });
             },
           ),
         ],
       ),
-      body: usuarioLogado == null
-          ? const Center(child: Text("Nenhum usuário autenticado."))
-          : StreamBuilder<DocumentSnapshot>(
-        stream: _firestore.collection('usuarios').doc(usuarioLogado.uid).snapshots(),
+      body: StreamBuilder<DocumentSnapshot>(
+        stream: FirebaseFirestore.instance
+            .collection('usuarios')
+            .doc(usuario.uid)
+            .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator(color: Colors.brown));
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text("Erro ao carregar os dados do usuário."),
+            );
           }
 
-          Map<String, dynamic> dados = {};
-          if (snapshot.hasData && snapshot.data!.exists) {
-            dados = snapshot.data!.data() as Map<String, dynamic>;
-            if (!_emEdicao) {
-              _nomeController.text = dados['nome'] ?? '';
-              _aniversarioController.text = dados['aniversario'] ?? '';
-              _telefoneController.text = dados['telefone'] ?? '';
-              _propriedadeController.text = dados['propriedade'] ?? '';
-            }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.green),
+            );
+          }
+
+          if (!snapshot.hasData || !snapshot.data!.exists) {
+            return const Center(
+              child: Padding(
+                padding: EdgeInsets.all(20),
+                child: Text(
+                  "Perfil não encontrado. Verifique se o cadastro foi concluído corretamente.",
+                  textAlign: TextAlign.center,
+                ),
+              ),
+            );
+          }
+
+          final dados = snapshot.data!.data() as Map<String, dynamic>;
+
+          if (!_modoEdicao) {
+            _preencherCampos(dados);
           }
 
           return SingleChildScrollView(
-            padding: const EdgeInsets.all(20.0),
+            padding: const EdgeInsets.all(20),
             child: Column(
               children: [
-                CircleAvatar(radius: 65, backgroundImage: NetworkImage(dados['foto_url'] ?? 'https://via.placeholder.com/150')),
-                const SizedBox(height: 30),
-                _construirCampoCadastral(rotulo: "Nome Completo", controlador: _nomeController, habilitado: _emEdicao, icone: Icons.person),
-                _construirCampoCadastral(rotulo: "E-mail de Cadastro", controlador: TextEditingController(text: usuarioLogado.email), habilitado: false, icone: Icons.email),
-                GestureDetector(
-                  onTap: () => _selecionarData(context),
-                  child: AbsorbPointer(
-                    absorbing: !_emEdicao,
-                    child: _construirCampoCadastral(rotulo: "Data de Aniversário", controlador: _aniversarioController, habilitado: false, icone: Icons.cake),
-                  ),
-                ),
-                _construirCampoCadastral(rotulo: "Telefone / Whatsapp", controlador: _telefoneController, habilitado: _emEdicao, icone: Icons.phone, teclado: TextInputType.phone),
-                _construirCampoCadastral(rotulo: "Nome da Propriedade", controlador: _propriedadeController, habilitado: _emEdicao, icone: Icons.gite),
-                const SizedBox(height: 40),
-                SizedBox(
-                  width: double.infinity,
-                  height: 48,
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.logout, color: Colors.brown),
-                    label: const Text("SAIR DA CONTA", style: TextStyle(color: Colors.brown, fontWeight: FontWeight.bold)),
-                    onPressed: () => _mostrarAlertaConfirmacao(titulo: "Sair", mensagem: "Encerrar sessão?", onConfirmar: _fazerLogout),
-                  ),
-                ),
-                const SizedBox(height: 15),
-                TextButton.icon(
-                  style: TextButton.styleFrom(foregroundColor: Colors.red),
-                  icon: const Icon(Icons.delete_forever),
-                  label: const Text("APAGAR PERFIL DEFINITIVAMENTE"),
-                  onPressed: () => _mostrarAlertaConfirmacao(titulo: "Excluir", mensagem: "Atenção! Ação irreversível.", ePerigoso: true, onConfirmar: _deletarConta),
-                ),
+                _cabecalhoPerfil(dados),
+                const SizedBox(height: 24),
+                _formularioPerfil(usuario),
+                const SizedBox(height: 20),
+                _botoesAcao(),
               ],
             ),
           );
         },
-      ),
-      bottomNavigationBar: BottomAppBar(
-        color: Colors.brown,
-        child: SingleChildScrollView(
-          scrollDirection: Axis.horizontal,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-            children: [
-              _botaoMenu(context, Icons.agriculture, "VACAS", Colors.greenAccent, const TelaVaca()),
-              _botaoMenu(context, Icons.vaccines, "INSEMINAR", Colors.blueAccent, const TelaInseminar()),
-              _botaoMenu(context, Icons.front_hand, "TOQUE", Colors.orange, const TelaToque()),
-              _botaoMenu(context, Icons.favorite, "PRENHEZ", Colors.redAccent, const TelaPrenhez()),
-              _botaoMenu(context, Icons.shopping_cart, "LOJA", Colors.yellowAccent, const Loja()),
-              _botaoMenu(context, Icons.history, "HISTÓRICO", Colors.white, const TelaHistorico()),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _construirCampoCadastral({
-    required String rotulo,
-    required TextEditingController controlador,
-    required bool habilitado,
-    required IconData icone,
-    TextInputType teclado = TextInputType.text,
-  }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 20.0),
-      child: TextField(
-        controller: controlador,
-        enabled: habilitado,
-        keyboardType: teclado,
-        decoration: InputDecoration(
-          labelText: rotulo,
-          prefixIcon: Icon(icone, color: Colors.brown),
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-        ),
       ),
     );
   }
