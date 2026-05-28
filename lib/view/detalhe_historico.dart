@@ -4,6 +4,7 @@ import 'package:fl_chart/fl_chart.dart';
 
 class DetalheHistorico extends StatefulWidget {
   final String vacaId;
+
   const DetalheHistorico({super.key, required this.vacaId});
 
   @override
@@ -15,25 +16,67 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
   final TextEditingController _leiteController = TextEditingController();
   final TextEditingController _obsController = TextEditingController();
 
+  @override
+  void dispose() {
+    _paisController.dispose();
+    _leiteController.dispose();
+    _obsController.dispose();
+    super.dispose();
+  }
+
   String _calcularIdade(String? dataNascimento) {
-    if (dataNascimento == null || dataNascimento.isEmpty) return "Não informada";
+    if (dataNascimento == null || dataNascimento.isEmpty) {
+      return "Não informada";
+    }
+
     try {
-      DateTime nascimento = DateTime.parse(dataNascimento);
-      DateTime hoje = DateTime.now();
+      final partes = dataNascimento.split('/');
+
+      if (partes.length != 3) {
+        return "Data inválida";
+      }
+
+      final nascimento = DateTime(
+        int.parse(partes[2]),
+        int.parse(partes[1]),
+        int.parse(partes[0]),
+      );
+
+      final hoje = DateTime.now();
+
       int anos = hoje.year - nascimento.year;
       int meses = hoje.month - nascimento.month;
+
       if (meses < 0 || (meses == 0 && hoje.day < nascimento.day)) {
         anos--;
         meses += 12;
       }
+
       return "$anos anos e $meses meses";
     } catch (e) {
       return "Data inválida";
     }
   }
 
+  Future<void> _atualizarCampo(String campo, String valor) async {
+    await FirebaseFirestore.instance.collection('vacas').doc(widget.vacaId).update({
+      campo: valor,
+      'dataAtualizacao': FieldValue.serverTimestamp(),
+    });
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Informação atualizada."),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   Widget _gerarSugestaoDescarte(double producaoMedia, int partosFalhos) {
-    bool manter = producaoMedia >= 15.0 && partosFalhos <= 1;
+    final manter = producaoMedia >= 15.0 && partosFalhos <= 1;
+
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
@@ -43,14 +86,20 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
       ),
       child: Row(
         children: [
-          Icon(manter ? Icons.check_circle : Icons.warning, color: manter ? Colors.green : Colors.red),
+          Icon(
+            manter ? Icons.check_circle : Icons.warning,
+            color: manter ? Colors.green : Colors.red,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Text(
               manter
-                  ? "Sugestão: MANTER NO REBANHO. Alta produtividade média de leite e boa saúde reprodutiva."
-                  : "Sugestão: AVALIAR DESCARTE. Baixa produção leiteira recente ou histórico de partos falhos.",
-              style: TextStyle(fontWeight: FontWeight.bold, color: manter ? Colors.green.shade900 : Colors.red.shade900),
+                  ? "Sugestão: manter no rebanho. Boa produtividade média e histórico reprodutivo favorável."
+                  : "Sugestão: avaliar descarte. Baixa produção ou histórico reprodutivo desfavorável.",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: manter ? Colors.green.shade900 : Colors.red.shade900,
+              ),
             ),
           ),
         ],
@@ -68,29 +117,40 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
         ),
         backgroundColor: Colors.brown,
         iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.white, size: 30),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: StreamBuilder<DocumentSnapshot>(
-        stream: FirebaseFirestore.instance.collection('vacas').doc(widget.vacaId).snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('vacas')
+            .doc(widget.vacaId)
+            .snapshots(),
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator(color: Colors.brown));
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text("Erro ao carregar o histórico."),
+            );
           }
 
-          var dados = snapshot.data!.data() as Map<String, dynamic>;
+          if (!snapshot.hasData) {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.brown),
+            );
+          }
+
+          if (!snapshot.data!.exists) {
+            return const Center(
+              child: Text("Registro não encontrado."),
+            );
+          }
+
+          final dados = snapshot.data!.data() as Map<String, dynamic>;
 
           _paisController.text = dados['pais'] ?? '';
           _leiteController.text = dados['producao_leite_mes'] ?? '';
           _obsController.text = dados['observacoes'] ?? '';
 
-          int partosSucesso = dados['partos_sucesso'] ?? 4;
-          int partosFalhos = dados['partos_falhos'] ?? 1;
-          double producaoMedia = double.tryParse(_leiteController.text) ?? 12.5;
+          final partosSucesso = dados['partos_sucesso'] ?? 0;
+          final partosFalhos = dados['partos_falhos'] ?? 0;
+          final producaoMedia = double.tryParse(_leiteController.text) ?? 0.0;
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -102,40 +162,76 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                     children: [
                       CircleAvatar(
                         radius: 60,
-                        backgroundImage: NetworkImage(dados['foto'] ?? 'https://via.placeholder.com/150'),
+                        backgroundImage: NetworkImage(
+                          dados['foto'] ?? 'https://via.placeholder.com/150',
+                        ),
                       ),
                       const SizedBox(height: 12),
                       Text(
                         dados['nome'] ?? 'Sem Nome',
-                        style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.brown),
+                        style: const TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.brown,
+                        ),
                       ),
-                      Text('Brinco Nº: ${dados['id'] ?? 'N/A'}', style: TextStyle(fontSize: 16, color: Colors.grey.shade700)),
-                      Text('Idade: ${_calcularIdade(dados['data_nascimento'])}', style: const TextStyle(fontSize: 16)),
+                      Text(
+                        'Brinco Nº: ${dados['brinco'] ?? 'N/A'}',
+                        style: TextStyle(fontSize: 16, color: Colors.grey.shade700),
+                      ),
+                      Text(
+                        'Idade: ${_calcularIdade(dados['dataNascimento'])}',
+                        style: const TextStyle(fontSize: 16),
+                      ),
                     ],
                   ),
                 ),
                 const Divider(height: 40),
-                const Text("Genealogia / Pais:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
+
+                const Text(
+                  "Genealogia / Pais:",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown,
+                  ),
+                ),
                 const SizedBox(height: 5),
                 TextField(
                   controller: _paisController,
                   decoration: const InputDecoration(
-                    hintText: 'Informe os Pais do animal (Mãe / Touro PAI)',
+                    hintText: 'Informe os pais do animal',
                     suffixIcon: Icon(Icons.edit, size: 20),
                   ),
-                  onSubmitted: (val) {
-                    FirebaseFirestore.instance.collection('vacas').doc(widget.vacaId).update({'pais': val});
-                  },
+                  onSubmitted: (valor) => _atualizarCampo('pais', valor),
                 ),
+
                 const SizedBox(height: 20),
-                const Text("Histórico de Filhos (Vindo da Prenhez):", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
+
+                const Text(
+                  "Histórico de Filhos:",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown,
+                  ),
+                ),
                 const SizedBox(height: 5),
                 Text(
                   dados['filhos'] ?? "Nenhum filho registrado até o momento.",
                   style: const TextStyle(fontSize: 15, fontStyle: FontStyle.italic),
                 ),
+
                 const SizedBox(height: 20),
-                const Text("Produção de Leite Deste Mês (Litros):", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
+
+                const Text(
+                  "Produção de Leite Deste Mês (Litros):",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown,
+                  ),
+                ),
                 const SizedBox(height: 5),
                 TextField(
                   controller: _leiteController,
@@ -144,23 +240,44 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                     hintText: 'Ex: 450',
                     suffixText: 'L',
                   ),
-                  onSubmitted: (val) {
-                    FirebaseFirestore.instance.collection('vacas').doc(widget.vacaId).update({'producao_leite_mes': val});
-                  },
+                  onSubmitted: (valor) => _atualizarCampo('producao_leite_mes', valor),
                 ),
+
                 const SizedBox(height: 20),
-                const Text("Área de Observações:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
+
+                const Text(
+                  "Área de Observações:",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown,
+                  ),
+                ),
                 const SizedBox(height: 5),
                 TextField(
                   controller: _obsController,
                   maxLines: 2,
-                  decoration: const InputDecoration(border: OutlineInputBorder(), hintText: 'Escreva anotações importantes sobre o gado...'),
-                  onSubmitted: (val) {
-                    FirebaseFirestore.instance.collection('vacas').doc(widget.vacaId).update({'observacoes': val});
-                  },
+                  decoration: const InputDecoration(
+                    border: OutlineInputBorder(),
+                    hintText: 'Escreva anotações importantes sobre o gado...',
+                  ),
+                  onSubmitted: (valor) => _atualizarCampo('observacoes', valor),
                 ),
+
                 const SizedBox(height: 30),
-                const Text("Gráfico de Índices Zootécnicos:", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown)),
+
+                _gerarSugestaoDescarte(producaoMedia, partosFalhos),
+
+                const SizedBox(height: 30),
+
+                const Text(
+                  "Gráfico de Índices Zootécnicos:",
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.brown,
+                  ),
+                ),
                 const SizedBox(height: 15),
                 SizedBox(
                   height: 160,
@@ -169,9 +286,36 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                       sectionsSpace: 2,
                       centerSpaceRadius: 40,
                       sections: [
-                        PieChartSectionData(color: Colors.green, value: partosSucesso.toDouble(), title: '$partosSucesso', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        PieChartSectionData(color: Colors.red, value: partosFalhos.toDouble(), title: '$partosFalhos', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                        PieChartSectionData(color: Colors.blue, value: producaoMedia, title: '${producaoMedia.toStringAsFixed(1)}L', radius: 50, titleStyle: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        PieChartSectionData(
+                          color: Colors.green,
+                          value: partosSucesso.toDouble(),
+                          title: '$partosSucesso',
+                          radius: 50,
+                          titleStyle: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        PieChartSectionData(
+                          color: Colors.red,
+                          value: partosFalhos.toDouble(),
+                          title: '$partosFalhos',
+                          radius: 50,
+                          titleStyle: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        PieChartSectionData(
+                          color: Colors.blue,
+                          value: producaoMedia <= 0 ? 1 : producaoMedia,
+                          title: '${producaoMedia.toStringAsFixed(1)}L',
+                          radius: 50,
+                          titleStyle: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -182,11 +326,9 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   children: [
                     _construirLegenda(Colors.green, "Partos Sucesso"),
                     _construirLegenda(Colors.red, "Partos Falhos"),
-                    _construirLegenda(Colors.blue, "Prod. Média (L)"),
+                    _construirLegenda(Colors.blue, "Prod. Média"),
                   ],
                 ),
-                const SizedBox(height: 35),
-                const SizedBox(height: 20),
               ],
             ),
           );
@@ -198,9 +340,19 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
   Widget _construirLegenda(Color cor, String texto) {
     return Row(
       children: [
-        Container(width: 14, height: 14, decoration: BoxDecoration(color: cor, borderRadius: BorderRadius.circular(3))),
+        Container(
+          width: 14,
+          height: 14,
+          decoration: BoxDecoration(
+            color: cor,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
         const SizedBox(width: 6),
-        Text(texto, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600)),
+        Text(
+          texto,
+          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+        ),
       ],
     );
   }

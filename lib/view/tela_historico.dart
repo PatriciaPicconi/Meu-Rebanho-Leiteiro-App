@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'telavaca.dart';
 import 'telainseminar.dart';
 import 'telatoque.dart';
@@ -16,9 +18,23 @@ class TelaHistorico extends StatefulWidget {
 
 class _TelaHistoricoState extends State<TelaHistorico> {
   final TextEditingController _searchController = TextEditingController();
-  String _filtroNome = '';
+  String _filtroNome = "";
 
-  Widget _botaoMenu(BuildContext context, IconData icone, String label, Color corIcone, Widget tela) {
+  String? get _usuarioId => FirebaseAuth.instance.currentUser?.uid;
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  Widget _botaoMenu(
+      BuildContext context,
+      IconData icone,
+      String label,
+      Color corIcone,
+      Widget tela,
+      ) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(
         context,
@@ -44,6 +60,14 @@ class _TelaHistoricoState extends State<TelaHistorico> {
 
   @override
   Widget build(BuildContext context) {
+    final usuarioId = _usuarioId;
+
+    if (usuarioId == null) {
+      return const Scaffold(
+        body: Center(child: Text("Usuário não autenticado.")),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -52,12 +76,6 @@ class _TelaHistoricoState extends State<TelaHistorico> {
         ),
         backgroundColor: Colors.brown,
         automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.white, size: 30),
-            onPressed: () {},
-          ),
-        ],
       ),
       body: Column(
         children: [
@@ -71,7 +89,7 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                 });
               },
               decoration: InputDecoration(
-                hintText: 'Buscar no histórico por nome ou número...',
+                hintText: 'Buscar no histórico por nome ou brinco...',
                 prefixIcon: const Icon(Icons.search, color: Colors.brown),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15.0),
@@ -85,24 +103,41 @@ class _TelaHistoricoState extends State<TelaHistorico> {
           ),
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
-              stream: FirebaseFirestore.instance.collection('vacas').snapshots(),
+              stream: FirebaseFirestore.instance
+                  .collection('vacas')
+                  .where('usuarioId', isEqualTo: usuarioId)
+                  .snapshots(),
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator(color: Colors.brown));
+                  return const Center(
+                    child: CircularProgressIndicator(color: Colors.brown),
+                  );
                 }
+
+                if (snapshot.hasError) {
+                  return const Center(
+                    child: Text("Erro ao carregar histórico."),
+                  );
+                }
+
                 if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                  return const Center(child: Text("Nenhum registro encontrado no Firebase."));
+                  return const Center(
+                    child: Text("Nenhum registro encontrado para este usuário."),
+                  );
                 }
 
                 final docsFiltrados = snapshot.data!.docs.where((doc) {
                   final dados = doc.data() as Map<String, dynamic>;
                   final nome = (dados['nome'] ?? '').toString().toLowerCase();
-                  final id = (dados['id'] ?? '').toString().toLowerCase();
-                  return nome.contains(_filtroNome) || id.contains(_filtroNome);
+                  final brinco = (dados['brinco'] ?? '').toString().toLowerCase();
+
+                  return nome.contains(_filtroNome) || brinco.contains(_filtroNome);
                 }).toList();
 
                 if (docsFiltrados.isEmpty) {
-                  return const Center(child: Text("Nenhum gado corresponds à busca."));
+                  return const Center(
+                    child: Text("Nenhum animal corresponde à busca."),
+                  );
                 }
 
                 return ListView.builder(
@@ -114,16 +149,20 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                     return Card(
                       margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                       elevation: 2,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundImage: NetworkImage(vacaDados['foto'] ?? 'https://via.placeholder.com/150'),
+                          backgroundImage: NetworkImage(
+                            vacaDados['foto'] ?? 'https://via.placeholder.com/150',
+                          ),
                         ),
                         title: Text(
                           vacaDados['nome'] ?? 'Sem nome',
                           style: const TextStyle(fontWeight: FontWeight.bold),
                         ),
-                        subtitle: Text('Número: ${vacaDados['id'] ?? 'N/A'}'),
+                        subtitle: Text('Brinco: ${vacaDados['brinco'] ?? 'N/A'}'),
                         trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.grey),
                         onTap: () {
                           Navigator.push(

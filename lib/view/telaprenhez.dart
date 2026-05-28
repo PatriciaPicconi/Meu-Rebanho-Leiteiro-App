@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'telavaca.dart';
 import 'telainseminar.dart';
 import 'telatoque.dart';
@@ -18,7 +20,22 @@ class TelaPrenhez extends StatefulWidget {
 class _TelaPrenhezState extends State<TelaPrenhez> {
   final TextEditingController _buscaController = TextEditingController();
   String _busca = "";
-  Widget _botaoMenu(BuildContext context, IconData icone, String label, Color corIcone, Widget tela) {
+
+  String? get _usuarioId => FirebaseAuth.instance.currentUser?.uid;
+
+  @override
+  void dispose() {
+    _buscaController.dispose();
+    super.dispose();
+  }
+
+  Widget _botaoMenu(
+      BuildContext context,
+      IconData icone,
+      String label,
+      Color corIcone,
+      Widget tela,
+      ) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(
         context,
@@ -29,7 +46,14 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
         children: [
           Icon(icone, color: corIcone, size: 22),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -37,6 +61,14 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
 
   @override
   Widget build(BuildContext context) {
+    final usuarioId = _usuarioId;
+
+    if (usuarioId == null) {
+      return const Scaffold(
+        body: Center(child: Text("Usuário não autenticado.")),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
@@ -49,7 +81,10 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
           IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaPerfil()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TelaPerfil()),
+              );
             },
           ),
         ],
@@ -59,7 +94,11 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               controller: _buscaController,
-              onChanged: (value) => setState(() => _busca = value.toLowerCase()),
+              onChanged: (value) {
+                setState(() {
+                  _busca = value.toLowerCase();
+                });
+              },
               decoration: InputDecoration(
                 hintText: "Pesquisar vaca prenhe...",
                 prefixIcon: const Icon(Icons.search),
@@ -74,16 +113,25 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('vacas')
-            .where('status', isEqualTo: 'Prenhe')
+            .where('usuarioId', isEqualTo: usuarioId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return const Center(child: Text("Erro ao carregar dados"));
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) {
+            return const Center(child: Text("Erro ao carregar dados."));
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
           final documentos = snapshot.data!.docs.where((doc) {
-            final nome = (doc['nome'] ?? "").toString().toLowerCase();
-            final brinco = (doc['brinco'] ?? "").toString();
-            return nome.contains(_busca) || brinco.contains(_busca);
+            final dados = doc.data() as Map<String, dynamic>;
+            final nome = (dados['nome'] ?? "").toString().toLowerCase();
+            final brinco = (dados['brinco'] ?? "").toString().toLowerCase();
+            final status = (dados['status'] ?? "").toString();
+
+            return status == 'Prenhe' &&
+                (nome.contains(_busca) || brinco.contains(_busca));
           }).toList();
 
           if (documentos.isEmpty) {
@@ -95,6 +143,7 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
             itemBuilder: (context, index) {
               final doc = documentos[index];
               final vaca = doc.data() as Map<String, dynamic>;
+
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 15, vertical: 8),
                 child: ListTile(
@@ -102,14 +151,20 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
                     backgroundColor: Colors.red,
                     child: Icon(Icons.favorite, color: Colors.white),
                   ),
-                  title: Text("${vaca['nome'] ?? 'Sem nome'} (Brinco: ${vaca['brinco'] ?? 'N/A'})",
-                      style: const TextStyle(fontWeight: FontWeight.bold)),
-                  subtitle: Text("Previsão de Parto: ${vaca['ultimoParto'] ?? '--/--/----'}"),
+                  title: Text(
+                    "${vaca['nome'] ?? 'Sem nome'} (Brinco: ${vaca['brinco'] ?? 'N/A'})",
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  subtitle: Text(
+                    "Previsão de Parto: ${vaca['ultimoParto'] ?? '--/--/----'}",
+                  ),
                   trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => DetalhesPrenhez(vaca: vaca)),
+                      MaterialPageRoute(
+                        builder: (context) => DetalhesPrenhez(vaca: vaca),
+                      ),
                     );
                   },
                 ),
@@ -141,6 +196,7 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
 
 class DetalhesPrenhez extends StatelessWidget {
   final Map<String, dynamic> vaca;
+
   const DetalhesPrenhez({super.key, required this.vaca});
 
   @override
@@ -177,17 +233,38 @@ class DetalhesPrenhez extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 15),
-                  Text(vaca['nome'] ?? "Sem nome", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  Text("Brinco: ${vaca['brinco'] ?? "N/A"}", style: const TextStyle(fontSize: 18, color: Colors.grey)),
+                  Text(
+                    vaca['nome'] ?? "Sem nome",
+                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                  ),
+                  Text(
+                    "Brinco: ${vaca['brinco'] ?? "N/A"}",
+                    style: const TextStyle(fontSize: 18, color: Colors.grey),
+                  ),
                 ],
               ),
             ),
             const Divider(height: 40),
-            _cardData("Data da Inseminação", vaca['ultimaInseminacao'] ?? "--/--/----", Icons.calendar_today, Colors.blue),
+            _cardData(
+              "Data da Inseminação",
+              vaca['ultimaInseminacao'] ?? "--/--/----",
+              Icons.calendar_today,
+              Colors.blue,
+            ),
             const SizedBox(height: 15),
-            _cardData("Previsão para Secar", vaca['ultimoExameToque'] ?? "--/--/----", Icons.water_drop_outlined, Colors.orange),
+            _cardData(
+              "Data do Exame de Toque",
+              vaca['ultimoExameToque'] ?? "--/--/----",
+              Icons.front_hand,
+              Colors.orange,
+            ),
             const SizedBox(height: 15),
-            _cardData("Previsão de Parto", vaca['ultimoParto'] ?? "--/--/----", Icons.child_care, Colors.green),
+            _cardData(
+              "Previsão de Parto",
+              vaca['ultimoParto'] ?? "--/--/----",
+              Icons.child_care,
+              Colors.green,
+            ),
             const SizedBox(height: 40),
             Container(
               padding: const EdgeInsets.all(15),
@@ -202,8 +279,12 @@ class DetalhesPrenhez extends StatelessWidget {
                   SizedBox(width: 10),
                   Expanded(
                     child: Text(
-                      "Após o parto, o animal retornará automaticamente para o status 'Vazia'.",
-                      style: TextStyle(fontSize: 13, color: Colors.red, fontWeight: FontWeight.w500),
+                      "Após o parto, o animal poderá retornar para o status 'Vazia'.",
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.red,
+                        fontWeight: FontWeight.w500,
+                      ),
                     ),
                   ),
                 ],

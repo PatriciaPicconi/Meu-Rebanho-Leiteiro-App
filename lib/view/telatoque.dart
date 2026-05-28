@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 import 'telavaca.dart';
 import 'telainseminar.dart';
 import 'telaprenhez.dart';
@@ -19,7 +21,21 @@ class _TelaToqueState extends State<TelaToque> {
   final TextEditingController _buscaController = TextEditingController();
   String _busca = "";
 
-  Widget _botaoMenu(BuildContext context, IconData icone, String label, Color corIcone, Widget tela) {
+  String? get _usuarioId => FirebaseAuth.instance.currentUser?.uid;
+
+  @override
+  void dispose() {
+    _buscaController.dispose();
+    super.dispose();
+  }
+
+  Widget _botaoMenu(
+      BuildContext context,
+      IconData icone,
+      String label,
+      Color corIcone,
+      Widget tela,
+      ) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(
         context,
@@ -30,7 +46,14 @@ class _TelaToqueState extends State<TelaToque> {
         children: [
           Icon(icone, color: corIcone, size: 22),
           const SizedBox(height: 4),
-          Text(label, style: const TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.bold)),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 8,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
         ],
       ),
     );
@@ -38,16 +61,30 @@ class _TelaToqueState extends State<TelaToque> {
 
   @override
   Widget build(BuildContext context) {
+    final usuarioId = _usuarioId;
+
+    if (usuarioId == null) {
+      return const Scaffold(
+        body: Center(child: Text("Usuário não autenticado.")),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Meu Rebanho Leiteiro", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Meu Rebanho Leiteiro",
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.green,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaPerfil()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const TelaPerfil()),
+              );
             },
           ),
         ],
@@ -57,7 +94,11 @@ class _TelaToqueState extends State<TelaToque> {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               controller: _buscaController,
-              onChanged: (value) => setState(() => _busca = value.toLowerCase()),
+              onChanged: (value) {
+                setState(() {
+                  _busca = value.toLowerCase();
+                });
+              },
               decoration: InputDecoration(
                 hintText: "Pesquisar vaca por nome ou brinco...",
                 prefixIcon: const Icon(Icons.search),
@@ -72,17 +113,25 @@ class _TelaToqueState extends State<TelaToque> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('vacas')
-            .where('status', isEqualTo: 'Inseminada')
+            .where('usuarioId', isEqualTo: usuarioId)
             .snapshots(),
         builder: (context, snapshot) {
-          if (snapshot.hasError) return const Center(child: Text("Erro ao carregar dados"));
-          if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
+          if (snapshot.hasError) {
+            return const Center(child: Text("Erro ao carregar dados."));
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
           final documentos = snapshot.data!.docs.where((doc) {
             final data = doc.data() as Map<String, dynamic>;
             final nome = (data['nome'] ?? "").toString().toLowerCase();
-            final brinco = (data['brinco'] ?? "").toString();
-            return nome.contains(_busca) || brinco.contains(_busca);
+            final brinco = (data['brinco'] ?? "").toString().toLowerCase();
+            final status = (data['status'] ?? "").toString();
+
+            return status == 'Inseminada' &&
+                (nome.contains(_busca) || brinco.contains(_busca));
           }).toList();
 
           if (documentos.isEmpty) {
@@ -94,19 +143,28 @@ class _TelaToqueState extends State<TelaToque> {
             itemBuilder: (context, index) {
               final doc = documentos[index];
               final vaca = doc.data() as Map<String, dynamic>;
+
               return ListTile(
                 leading: const CircleAvatar(
                   backgroundColor: Colors.orange,
                   child: Icon(Icons.front_hand, color: Colors.white),
                 ),
-                title: Text(vaca['nome'] ?? 'Sem nome', style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text("Brinco: ${vaca['brinco']} - Insem.: ${vaca['ultimaInseminacao'] ?? '--/--/----'}"),
+                title: Text(
+                  vaca['nome'] ?? 'Sem nome',
+                  style: const TextStyle(fontWeight: FontWeight.bold),
+                ),
+                subtitle: Text(
+                  "Brinco: ${vaca['brinco']} - Insem.: ${vaca['ultimaInseminacao'] ?? '--/--/----'}",
+                ),
                 trailing: const Icon(Icons.arrow_forward_ios, size: 16),
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => FormularioToque(vaca: vaca, id: doc.id),
+                      builder: (context) => FormularioToque(
+                        vaca: vaca,
+                        id: doc.id,
+                      ),
                     ),
                   );
                 },
@@ -139,7 +197,12 @@ class _TelaToqueState extends State<TelaToque> {
 class FormularioToque extends StatefulWidget {
   final Map<String, dynamic> vaca;
   final String id;
-  const FormularioToque({super.key, required this.vaca, required this.id});
+
+  const FormularioToque({
+    super.key,
+    required this.vaca,
+    required this.id,
+  });
 
   @override
   State<FormularioToque> createState() => _FormularioToqueState();
@@ -148,18 +211,29 @@ class FormularioToque extends StatefulWidget {
 class _FormularioToqueState extends State<FormularioToque> {
   bool? _estaPrenha;
 
-  void _confirmarExame() async {
+  Future<void> _confirmarExame() async {
     if (_estaPrenha == null) {
-      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Selecione o resultado!")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Selecione o resultado!")),
+      );
       return;
     }
 
     await FirebaseFirestore.instance.collection('vacas').doc(widget.id).update({
       'status': _estaPrenha! ? 'Prenhe' : 'Vazia',
       'ultimoExameToque': DateTime.now().toString().split(' ')[0],
+      'dataAtualizacao': FieldValue.serverTimestamp(),
     });
 
-    if (mounted) Navigator.pop(context);
+    if (mounted) {
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Exame de toque registrado com sucesso."),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   @override
@@ -188,14 +262,22 @@ class _FormularioToqueState extends State<FormularioToque> {
               value: true,
               groupValue: _estaPrenha,
               activeColor: Colors.green,
-              onChanged: (value) => setState(() => _estaPrenha = value),
+              onChanged: (value) {
+                setState(() {
+                  _estaPrenha = value;
+                });
+              },
             ),
             RadioListTile<bool>(
-              title: const Text("Não (Voltar para Vazia)"),
+              title: const Text("Não, voltar para vazia"),
               value: false,
               groupValue: _estaPrenha,
               activeColor: Colors.green,
-              onChanged: (value) => setState(() => _estaPrenha = value),
+              onChanged: (value) {
+                setState(() {
+                  _estaPrenha = value;
+                });
+              },
             ),
             const SizedBox(height: 40),
             ElevatedButton(
