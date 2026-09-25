@@ -184,6 +184,13 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
               _botaoMenu(context, Icons.vaccines, "INSEMINAR", Colors.blue, const TelaInseminar()),
               _botaoMenu(context, Icons.front_hand, "TOQUE", Colors.orange, const TelaToque()),
               _botaoMenu(context, Icons.history, "HISTÓRICO", Colors.purpleAccent, const TelaHistorico()),
+              _botaoMenu(
+                context,
+                Icons.person,
+                'PERFIL',
+                Colors.yellowAccent,
+                const TelaPerfil(),
+              ),
               _botaoMenu(context, Icons.trending_down, "BAIXAS", Colors.brown, const TelaBaixas()),
             ],
           ),

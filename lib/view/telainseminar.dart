@@ -7,6 +7,7 @@ import 'telatoque.dart';
 import 'telaprenhez.dart';
 import 'telaperfil.dart';
 import 'tela_historico.dart';
+import 'tela_baixas.dart';
 import '../services/google_calendar_service.dart';
 
 class TelaInseminar extends StatefulWidget {
@@ -366,15 +367,22 @@ class _TelaInseminarState extends State<TelaInseminar> {
                 context,
                 Icons.person,
                 'PERFIL',
-                Colors.white,
+                Colors.yellowAccent,
                 const TelaPerfil(),
               ),
               _botaoMenu(
                 context,
                 Icons.history,
                 'HISTÓRICO',
-                Colors.white,
+                Colors.purple,
                 const TelaHistorico(),
+              ),
+              _botaoMenu(
+                context,
+                Icons.trending_down,
+                "BAIXAS",
+                Colors.brown,
+                const TelaBaixas(),
               ),
             ],
           ),

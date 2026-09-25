@@ -41,7 +41,7 @@ class MenuPrincipal extends StatelessWidget {
             _itemMenu(context, "INSEMINAÇÃO", Icons.vaccines, Colors.blue, const TelaInseminar()),
             _itemMenu(context, "EXAME DE TOQUE", Icons.front_hand, Colors.orange, const TelaToque()),
             _itemMenu(context, "PRENHEZ", Icons.favorite, Colors.red, const TelaPrenhez()),
-            _itemMenu(context, "HISTÓRICO", Icons.history, Colors.teal, const TelaHistorico()),
+            _itemMenu(context, "HISTÓRICO", Icons.history, Colors.purple, const TelaHistorico()),
             _itemMenu(context, "BAIXAS", Icons.trending_down, Colors.brown, const TelaBaixas()),
           ],
         ),

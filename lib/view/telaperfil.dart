@@ -7,6 +7,7 @@ import 'telavaca.dart';
 import 'telainseminar.dart';
 import 'telatoque.dart';
 import 'telaprenhez.dart';
+import 'tela_baixas.dart';
 import 'tela_historico.dart';
 
 class TelaPerfil extends StatefulWidget {
@@ -437,17 +438,17 @@ class _TelaPerfilState
               child: const Icon(
                 Icons.person,
                 size: 82,
-                color: Colors.yellowAccent,
+                color: Colors.white,
               ),
             ),
             CircleAvatar(
               radius: 20,
               backgroundColor:
-              Colors.yellowAccent.shade700,
+              Colors.white,
               child: IconButton(
                 icon: const Icon(
                   Icons.camera_alt,
-                  color: Colors.white,
+                  color: Colors.black54,
                   size: 18,
                 ),
                 onPressed: () {
@@ -497,7 +498,7 @@ class _TelaPerfilState
           decoration:
           BoxDecoration(
             color:
-            Colors.green.shade100,
+            Colors.white,
             borderRadius:
             BorderRadius.circular(
               20,
@@ -507,7 +508,7 @@ class _TelaPerfilState
             _tipoUsuario,
             style:
             const TextStyle(
-              color: Colors.yellowAccent,
+              color: Colors.black54,
               fontWeight:
               FontWeight.bold,
             ),
@@ -657,7 +658,7 @@ class _TelaPerfilState
               style:
               ElevatedButton.styleFrom(
                 backgroundColor:
-                Colors.yellowAccent.shade700,
+                Colors.blue,
                 shape:
                 RoundedRectangleBorder(
                   borderRadius:
@@ -1001,8 +1002,15 @@ class _TelaPerfilState
                 context,
                 Icons.history,
                 "HISTÓRICO",
-                Colors.white,
+                Colors.purple,
                 const TelaHistorico(),
+              ),
+
+              _botaoMenu(
+                  context, Icons.trending_down,
+                  "BAIXAS",
+                  Colors.brown,
+                  const TelaBaixas()
               ),
             ],
           ),

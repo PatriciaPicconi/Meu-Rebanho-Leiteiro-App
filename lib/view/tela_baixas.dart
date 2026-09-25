@@ -4,6 +4,7 @@ import 'telainseminar.dart';
 import 'telatoque.dart';
 import 'telaprenhez.dart';
 import 'tela_historico.dart';
+import 'telaperfil.dart';
 import 'formulario_baixas.dart';
 import 'inf_baixas.dart';
 
@@ -31,12 +32,19 @@ class _TelaBaixasState extends State<TelaBaixas> {
         final nome = vaca['nome']!.toLowerCase();
         final numero = vaca['id']!.toLowerCase();
         final input = query.toLowerCase();
+
         return nome.contains(input) || numero.contains(input);
       }).toList();
     });
   }
 
-  Widget _botaoMenu(BuildContext context, IconData icone, String label, Color corIcone, Widget tela) {
+  Widget _botaoMenu(
+      BuildContext context,
+      IconData icone,
+      String label,
+      Color corIcone,
+      Widget tela,
+      ) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(
         context,
@@ -45,7 +53,11 @@ class _TelaBaixasState extends State<TelaBaixas> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icone, color: corIcone, size: 22),
+          Icon(
+            icone,
+            color: corIcone,
+            size: 22,
+          ),
           const SizedBox(height: 4),
           Text(
             label,
@@ -66,24 +78,27 @@ class _TelaBaixasState extends State<TelaBaixas> {
       appBar: AppBar(
         title: const Text(
           "Baixas",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.brown,
         automaticallyImplyLeading: false,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.white, size: 30),
-            onPressed: () {},
-          ),
-        ],
       ),
+
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.brown,
-        child: const Icon(Icons.add, color: Colors.white),
+        child: const Icon(
+          Icons.add,
+          color: Colors.white,
+        ),
         onPressed: () async {
           final Map<String, String>? novaBaixa = await Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const FormularioBaixas()),
+            MaterialPageRoute(
+              builder: (context) => const FormularioBaixas(),
+            ),
           );
 
           if (novaBaixa != null) {
@@ -94,6 +109,7 @@ class _TelaBaixasState extends State<TelaBaixas> {
           }
         },
       ),
+
       body: Column(
         children: [
           Padding(
@@ -103,43 +119,73 @@ class _TelaBaixasState extends State<TelaBaixas> {
               onChanged: _filtrarVacas,
               decoration: InputDecoration(
                 hintText: 'Buscar vaca por nome ou número...',
-                prefixIcon: const Icon(Icons.search, color: Colors.brown),
+                prefixIcon: const Icon(
+                  Icons.search,
+                  color: Colors.brown,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15.0),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(15.0),
-                  borderSide: const BorderSide(color: Colors.brown, width: 2),
+                  borderSide: const BorderSide(
+                    color: Colors.brown,
+                    width: 2,
+                  ),
                 ),
               ),
             ),
           ),
+
           Expanded(
             child: _vacasFiltradas.isEmpty
-                ? const Center(child: Text("Nenhum registro encontrado."))
+                ? const Center(
+              child: Text(
+                "Nenhum registro encontrado.",
+              ),
+            )
                 : ListView.builder(
               itemCount: _vacasFiltradas.length,
               itemBuilder: (context, index) {
                 final vaca = _vacasFiltradas[index];
+
                 return Card(
-                  margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  margin: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
                   elevation: 2,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                   child: ListTile(
                     leading: CircleAvatar(
-                      backgroundImage: NetworkImage(vaca['foto'] ?? 'https://via.placeholder.com/150'),
+                      backgroundImage: NetworkImage(
+                        vaca['foto'] ??
+                            'https://via.placeholder.com/150',
+                      ),
                     ),
                     title: Text(
                       vaca['nome']!,
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                      style: const TextStyle(
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                    subtitle: Text('Número: ${vaca['id']}'),
-                    trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: Colors.purple),
+                    subtitle: Text(
+                      'Número: ${vaca['id']}',
+                    ),
+                    trailing: const Icon(
+                      Icons.arrow_forward_ios,
+                      size: 16,
+                      color: Colors.purple,
+                    ),
                     onTap: () {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => InfBaixas(vaca: vaca),
+                          builder: (context) => InfBaixas(
+                            vaca: vaca,
+                          ),
                         ),
                       );
                     },
@@ -150,6 +196,7 @@ class _TelaBaixasState extends State<TelaBaixas> {
           ),
         ],
       ),
+
       bottomNavigationBar: BottomAppBar(
         color: Colors.brown,
         child: SingleChildScrollView(
@@ -157,11 +204,53 @@ class _TelaBaixasState extends State<TelaBaixas> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _botaoMenu(context, Icons.agriculture, "VACAS", Colors.green, const TelaVaca()),
-              _botaoMenu(context, Icons.vaccines, "INSEMINAR", Colors.blueAccent, const TelaInseminar()),
-              _botaoMenu(context, Icons.front_hand, "TOQUE", Colors.orange, const TelaToque()),
-              _botaoMenu(context, Icons.favorite, "PRENHEZ", Colors.redAccent, const TelaPrenhez()),
-              _botaoMenu(context, Icons.history, "HISTÓRICO", Colors.purpleAccent, const TelaHistorico()),
+              _botaoMenu(
+                context,
+                Icons.agriculture,
+                "VACAS",
+                Colors.green,
+                const TelaVaca(),
+              ),
+
+              _botaoMenu(
+                context,
+                Icons.vaccines,
+                "INSEMINAR",
+                Colors.blueAccent,
+                const TelaInseminar(),
+              ),
+
+              _botaoMenu(
+                context,
+                Icons.front_hand,
+                "TOQUE",
+                Colors.orange,
+                const TelaToque(),
+              ),
+
+              _botaoMenu(
+                context,
+                Icons.favorite,
+                "PRENHEZ",
+                Colors.redAccent,
+                const TelaPrenhez(),
+              ),
+
+              _botaoMenu(
+                context,
+                Icons.history,
+                "HISTÓRICO",
+                Colors.purpleAccent,
+                const TelaHistorico(),
+              ),
+
+              _botaoMenu(
+                context,
+                Icons.person,
+                "PERFIL",
+                Colors.yellowAccent,
+                const TelaPerfil(),
+              ),
             ],
           ),
         ),

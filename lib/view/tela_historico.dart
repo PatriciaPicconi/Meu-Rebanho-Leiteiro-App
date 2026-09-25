@@ -7,6 +7,7 @@ import 'telainseminar.dart';
 import 'telatoque.dart';
 import 'telaprenhez.dart';
 import 'tela_baixas.dart';
+import 'telaperfil.dart';
 import 'detalhe_historico.dart';
 
 class TelaHistorico extends StatefulWidget {
@@ -296,6 +297,14 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                 "BAIXAS",
                 Colors.brown.shade400,
                 const TelaBaixas(),
+              ),
+
+              _botaoMenu(
+                context,
+                Icons.person,
+                'PERFIL',
+                Colors.yellowAccent,
+                const TelaPerfil(),
               ),
             ],
           ),

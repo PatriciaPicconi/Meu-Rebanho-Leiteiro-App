@@ -64,7 +64,9 @@ class _TelaToqueState extends State<TelaToque> {
 
     if (usuarioId == null) {
       return const Scaffold(
-        body: Center(child: Text("Usuário não autenticado.")),
+        body: Center(
+          child: Text("Usuário não autenticado."),
+        ),
       );
     }
 
@@ -77,17 +79,6 @@ class _TelaToqueState extends State<TelaToque> {
         ),
         backgroundColor: Colors.orange,
         iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context) => const TelaPerfil()),
-              );
-            },
-          ),
-        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
@@ -104,7 +95,9 @@ class _TelaToqueState extends State<TelaToque> {
                 prefixIcon: const Icon(Icons.search),
                 fillColor: Colors.white,
                 filled: true,
-                border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
               ),
             ),
           ),
@@ -117,11 +110,15 @@ class _TelaToqueState extends State<TelaToque> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(child: Text("Erro ao carregar dados."));
+            return const Center(
+              child: Text("Erro ao carregar dados."),
+            );
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return const Center(
+              child: CircularProgressIndicator(),
+            );
           }
 
           final documentos = snapshot.data!.docs.where((doc) {
@@ -135,7 +132,9 @@ class _TelaToqueState extends State<TelaToque> {
           }).toList();
 
           if (documentos.isEmpty) {
-            return const Center(child: Text("Nenhuma vaca pendente de toque."));
+            return const Center(
+              child: Text("Nenhuma vaca pendente de toque."),
+            );
           }
 
           return ListView.builder(
@@ -147,16 +146,25 @@ class _TelaToqueState extends State<TelaToque> {
               return ListTile(
                 leading: const CircleAvatar(
                   backgroundColor: Colors.orange,
-                  child: Icon(Icons.front_hand, color: Colors.white),
+                  child: Icon(
+                    Icons.front_hand,
+                    color: Colors.white,
+                  ),
                 ),
                 title: Text(
                   vaca['nome'] ?? 'Sem nome',
-                  style: const TextStyle(fontWeight: FontWeight.bold),
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 subtitle: Text(
-                  "Brinco: ${vaca['brinco']} - Insem.: ${vaca['ultimaInseminacao'] ?? '--/--/----'}",
+                  "Brinco: ${vaca['brinco']} - Insem.: "
+                      "${vaca['ultimaInseminacao'] ?? '--/--/----'}",
                 ),
-                trailing: const Icon(Icons.arrow_forward_ios, size: 16),
+                trailing: const Icon(
+                  Icons.arrow_forward_ios,
+                  size: 16,
+                ),
                 onTap: () {
                   Navigator.push(
                     context,
@@ -180,11 +188,48 @@ class _TelaToqueState extends State<TelaToque> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _botaoMenu(context, Icons.agriculture, "VACA", Colors.green, const TelaVaca()),
-              _botaoMenu(context, Icons.vaccines, "INSEMINAR", Colors.blue, const TelaInseminar()),
-              _botaoMenu(context, Icons.favorite, "PRENHEZ", Colors.red, const TelaPrenhez()),
-              _botaoMenu(context, Icons.history, "HISTÓRICO", Colors.purpleAccent, const TelaHistorico()),
-              _botaoMenu(context, Icons.trending_down, "BAIXAS", Colors.brown, const TelaBaixas()),
+              _botaoMenu(
+                context,
+                Icons.agriculture,
+                "VACA",
+                Colors.green,
+                const TelaVaca(),
+              ),
+              _botaoMenu(
+                context,
+                Icons.vaccines,
+                "INSEMINAR",
+                Colors.blue,
+                const TelaInseminar(),
+              ),
+              _botaoMenu(
+                context,
+                Icons.favorite,
+                "PRENHEZ",
+                Colors.red,
+                const TelaPrenhez(),
+              ),
+              _botaoMenu(
+                context,
+                Icons.history,
+                "HISTÓRICO",
+                Colors.purpleAccent,
+                const TelaHistorico(),
+              ),
+              _botaoMenu(
+                context,
+                Icons.trending_down,
+                "BAIXAS",
+                Colors.brown,
+                const TelaBaixas(),
+              ),
+              _botaoMenu(
+                context,
+                Icons.person,
+                "PERFIL",
+                Colors.yellowAccent,
+                const TelaPerfil(),
+              ),
             ],
           ),
         ),
@@ -213,12 +258,17 @@ class _FormularioToqueState extends State<FormularioToque> {
   Future<void> _confirmarExame() async {
     if (_estaPrenha == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Selecione o resultado!")),
+        const SnackBar(
+          content: Text("Selecione o resultado!"),
+        ),
       );
       return;
     }
 
-    await FirebaseFirestore.instance.collection('vacas').doc(widget.id).update({
+    await FirebaseFirestore.instance
+        .collection('vacas')
+        .doc(widget.id)
+        .update({
       'status': _estaPrenha! ? 'Prenhe' : 'Vazia',
       'ultimoExameToque': DateTime.now().toString().split(' ')[0],
       'dataAtualizacao': FieldValue.serverTimestamp(),
@@ -228,7 +278,9 @@ class _FormularioToqueState extends State<FormularioToque> {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Exame de toque registrado com sucesso."),
+          content: Text(
+            "Exame de toque registrado com sucesso.",
+          ),
           backgroundColor: Colors.orange,
         ),
       );
@@ -239,28 +291,43 @@ class _FormularioToqueState extends State<FormularioToque> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Confirmar Resultado", style: TextStyle(color: Colors.white)),
+        title: const Text(
+          "Confirmar Resultado",
+          style: TextStyle(color: Colors.white),
+        ),
         backgroundColor: Colors.orange,
-        iconTheme: const IconThemeData(color: Colors.white),
+        iconTheme: const IconThemeData(
+          color: Colors.white,
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            const Icon(Icons.front_hand, size: 80, color: Colors.orange),
+            const Icon(
+              Icons.front_hand,
+              size: 80,
+              color: Colors.orange,
+            ),
             const SizedBox(height: 20),
             Text(
-              "Vaca: ${widget.vaca['nome']} (Brinco: ${widget.vaca['brinco']})",
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              "Vaca: ${widget.vaca['nome']} "
+                  "(Brinco: ${widget.vaca['brinco']})",
+              style: const TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+              ),
             ),
             const SizedBox(height: 30),
-            const Text("Resultado do Toque:", style: TextStyle(fontSize: 16)),
+            const Text(
+              "Resultado do Toque:",
+              style: TextStyle(fontSize: 16),
+            ),
             const SizedBox(height: 10),
             RadioListTile<bool>(
               title: const Text("Sim, está prenha"),
               value: true,
               groupValue: _estaPrenha,
-              activeColor: Colors.orange,
               onChanged: (value) {
                 setState(() {
                   _estaPrenha = value;
@@ -268,27 +335,33 @@ class _FormularioToqueState extends State<FormularioToque> {
               },
             ),
             RadioListTile<bool>(
-              title: const Text("Não, voltar para vazia"),
+              title: const Text("Não, está vazia"),
               value: false,
               groupValue: _estaPrenha,
-              activeColor: Colors.orange,
               onChanged: (value) {
                 setState(() {
                   _estaPrenha = value;
                 });
               },
             ),
-            const SizedBox(height: 40),
-            ElevatedButton(
-              onPressed: _confirmarExame,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.orange,
-                minimumSize: const Size(double.infinity, 55),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-              ),
-              child: const Text(
-                "CONFIRMAR EXAME",
-                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.orange,
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(
+                    vertical: 15,
+                  ),
+                ),
+                onPressed: _confirmarExame,
+                child: const Text(
+                  "CONFIRMAR",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
               ),
             ),
           ],
