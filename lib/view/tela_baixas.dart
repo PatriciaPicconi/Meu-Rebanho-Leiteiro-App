@@ -248,7 +248,7 @@ class _TelaBaixasState extends State<TelaBaixas> {
                 context,
                 Icons.person,
                 "PERFIL",
-                Colors.yellowAccent,
+                Colors.deepOrangeAccent,
                 const TelaPerfil(),
               ),
             ],

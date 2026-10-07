@@ -227,7 +227,7 @@ class _TelaToqueState extends State<TelaToque> {
                 context,
                 Icons.person,
                 "PERFIL",
-                Colors.yellowAccent,
+                Colors.deepOrangeAccent,
                 const TelaPerfil(),
               ),
             ],

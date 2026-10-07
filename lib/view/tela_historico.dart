@@ -303,7 +303,7 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                 context,
                 Icons.person,
                 'PERFIL',
-                Colors.yellowAccent,
+                Colors.deepOrangeAccent,
                 const TelaPerfil(),
               ),
             ],

@@ -609,7 +609,7 @@ class _TelaVacaState extends State<TelaVaca> {
                 context,
                 Icons.person,
                 "PERFIL",
-                Colors.yellowAccent,
+                Colors.deepOrangeAccent,
                 const TelaPerfil(),
               ),
             ],

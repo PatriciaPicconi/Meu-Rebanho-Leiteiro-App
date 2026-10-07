@@ -367,7 +367,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
                 context,
                 Icons.person,
                 'PERFIL',
-                Colors.yellowAccent,
+                Colors.deepOrangeAccent,
                 const TelaPerfil(),
               ),
               _botaoMenu(

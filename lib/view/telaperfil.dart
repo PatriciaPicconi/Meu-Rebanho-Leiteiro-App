@@ -150,7 +150,7 @@ class _TelaPerfilState
           content: Text(
             "Perfil atualizado com sucesso!",
           ),
-          backgroundColor: Colors.yellowAccent,
+          backgroundColor: Colors.deepOrangeAccent,
         ),
       );
     } catch (e) {
@@ -255,7 +255,7 @@ class _TelaPerfilState
                 backgroundColor:
                 perigoso
                     ? Colors.red
-                    : Colors.yellowAccent.shade700,
+                    : Colors.deepOrangeAccent,
               ),
               onPressed: () {
                 Navigator.pop(context);
@@ -310,7 +310,7 @@ class _TelaPerfilState
       labelText: label,
       prefixIcon: Icon(
         icone,
-        color: Colors.yellowAccent.shade700,
+        color: Colors.deepOrangeAccent,
       ),
       border: OutlineInputBorder(
         borderRadius:
@@ -330,7 +330,7 @@ class _TelaPerfilState
         BorderRadius.circular(12),
         borderSide:
         const BorderSide(
-          color: Colors.yellowAccent,
+          color: Colors.deepOrangeAccent,
           width: 2,
         ),
       ),
@@ -434,7 +434,7 @@ class _TelaPerfilState
             CircleAvatar(
               radius: 62,
               backgroundColor:
-              Colors.yellowAccent.shade700,
+              Colors.deepOrangeAccent,
               child: const Icon(
                 Icons.person,
                 size: 82,
@@ -832,7 +832,7 @@ class _TelaPerfilState
           title:
           const Text("Perfil"),
           backgroundColor:
-          Colors.yellowAccent.shade700,
+          Colors.deepOrangeAccent,
         ),
         body:
         const Center(
@@ -848,7 +848,7 @@ class _TelaPerfilState
       const Color(0xFFEAF3E8),
       appBar: AppBar(
         backgroundColor:
-        Colors.yellowAccent.shade700,
+        Colors.deepOrangeAccent,
         iconTheme:
         const IconThemeData(
           color: Colors.white,
@@ -903,7 +903,7 @@ class _TelaPerfilState
             return const Center(
               child:
               CircularProgressIndicator(
-                color: Colors.yellowAccent,
+                color: Colors.deepOrangeAccent,
               ),
             );
           }
@@ -960,7 +960,7 @@ class _TelaPerfilState
       ),
       bottomNavigationBar:
       BottomAppBar(
-        color: Colors.yellowAccent.shade700,
+        color: Colors.deepOrangeAccent,
         child:
         SingleChildScrollView(
           scrollDirection:

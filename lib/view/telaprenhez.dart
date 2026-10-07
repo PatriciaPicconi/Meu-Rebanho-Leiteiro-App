@@ -78,6 +78,7 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
         backgroundColor: Colors.red,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
+          /**
           IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
             onPressed: () {
@@ -87,6 +88,7 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
               );
             },
           ),
+          **/
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
@@ -188,7 +190,7 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
                 context,
                 Icons.person,
                 'PERFIL',
-                Colors.yellowAccent,
+                Colors.deepOrangeAccent,
                 const TelaPerfil(),
               ),
               _botaoMenu(context, Icons.trending_down, "BAIXAS", Colors.brown, const TelaBaixas()),
