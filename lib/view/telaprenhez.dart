@@ -102,7 +102,7 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
                 });
               },
               decoration: InputDecoration(
-                hintText: "Pesquisar vaca prenhe...",
+                hintText: "Pesquisar animal prenhe...",
                 prefixIcon: const Icon(Icons.search),
                 fillColor: Colors.white,
                 filled: true,
@@ -137,7 +137,7 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
           }).toList();
 
           if (documentos.isEmpty) {
-            return const Center(child: Text("Nenhuma vaca prenhe encontrada."));
+            return const Center(child: Text("Nenhuma animal prenhe encontrada."));
           }
 
           return ListView.builder(
@@ -182,7 +182,7 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _botaoMenu(context, Icons.agriculture, "VACA", Colors.green, const TelaVaca()),
+              _botaoMenu(context, Icons.agriculture, "ANIMAL", Colors.green, const TelaVaca()),
               _botaoMenu(context, Icons.vaccines, "INSEMINAR", Colors.blue, const TelaInseminar()),
               _botaoMenu(context, Icons.front_hand, "TOQUE", Colors.orange, const TelaToque()),
               _botaoMenu(context, Icons.history, "HISTÓRICO", Colors.purpleAccent, const TelaHistorico()),

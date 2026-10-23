@@ -49,7 +49,7 @@ class Loja extends StatelessWidget {
           child: Row(
             mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
-              _botaoMenu(context, Icons.agriculture, "VACAS", Colors.green, const TelaVaca()),
+              _botaoMenu(context, Icons.agriculture, "ANIMAL", Colors.green, const TelaVaca()),
               _botaoMenu(context, Icons.vaccines, "INSEMINAR", Colors.blueAccent, const TelaInseminar()),
               _botaoMenu(context, Icons.front_hand, "TOQUE", Colors.orange, const TelaToque()),
               _botaoMenu(context, Icons.favorite, "PRENHEZ", Colors.redAccent, const TelaPrenhez()),

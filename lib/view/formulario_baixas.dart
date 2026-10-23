@@ -56,7 +56,7 @@ class _FormularioBaixasState extends State<FormularioBaixas> {
               TextFormField(
                 controller: _nomeController,
                 decoration: InputDecoration(
-                  labelText: 'Nome da Vaca',
+                  labelText: 'Nome do animal',
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.brown)),
                 ),

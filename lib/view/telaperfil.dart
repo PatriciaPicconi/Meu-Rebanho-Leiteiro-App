@@ -973,7 +973,7 @@ class _TelaPerfilState
               _botaoMenu(
                 context,
                 Icons.agriculture,
-                "VACAS",
+                "ANIMAL",
                 Colors.lightGreenAccent,
                 const TelaVaca(),
               ),

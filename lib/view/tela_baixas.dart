@@ -207,7 +207,7 @@ class _TelaBaixasState extends State<TelaBaixas> {
               _botaoMenu(
                 context,
                 Icons.agriculture,
-                "VACAS",
+                "ANIMAL",
                 Colors.green,
                 const TelaVaca(),
               ),

@@ -262,7 +262,7 @@ class _TelaHistoricoState extends State<TelaHistorico> {
               _botaoMenu(
                 context,
                 Icons.agriculture,
-                "VACAS",
+                "ANIMAL",
                 Colors.green,
                 const TelaVaca(),
               ),

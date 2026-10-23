@@ -113,7 +113,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Vaca excluída com sucesso."),
+          content: Text("Animal excluído com sucesso."),
           backgroundColor: Colors.green,
         ),
       );
@@ -127,9 +127,9 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Excluir vaca"),
+          title: const Text("Excluir animal"),
           content: const Text(
-            "Deseja realmente excluir esta vaca? Este botão foi criado para o caso de um registro em duplicidade, ao confirmar a exclusão, esse animal não aparecerá em baixas. Esta ação não poderá ser desfeita.",
+            "Deseja realmente excluir este animal? Este botão foi criado para o caso de um registro em duplicidade, ao confirmar a exclusão, esse animal não aparecerá em baixas. Esta ação não poderá ser desfeita.",
           ),
           actions: [
             TextButton(
@@ -257,7 +257,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
         OutlinedButton.icon(
           onPressed: () {
             _mostrarMensagem(
-              "Foto da vaca poderá ser implementada futuramente.",
+              "Foto da animal poderá ser implementada futuramente.",
               Colors.green,
             );
           },
@@ -266,7 +266,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
         ),
         const SizedBox(height: 12),
         Text(
-          dados['nome'] ?? "Vaca sem nome",
+          dados['nome'] ?? "Animal sem nome",
           textAlign: TextAlign.center,
           style: const TextStyle(
             fontSize: 24,
@@ -460,7 +460,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
             onPressed: _confirmarExclusao,
             icon: const Icon(Icons.delete, color: Colors.red),
             label: const Text(
-              "EXCLUIR VACA",
+              "EXCLUIR ANIMAL",
               style: TextStyle(
                 color: Colors.red,
                 fontWeight: FontWeight.bold,
@@ -488,7 +488,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
       backgroundColor: const Color(0xFFEAF3E8),
       appBar: AppBar(
         title: const Text(
-          "Perfil da Vaca",
+          "Perfil do animal",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         backgroundColor: Colors.green,
@@ -515,7 +515,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(
-              child: Text("Erro ao carregar os dados da vaca."),
+              child: Text("Erro ao carregar os dados da animal."),
             );
           }
 
@@ -527,7 +527,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
             return const Center(
-              child: Text("Vaca não encontrada."),
+              child: Text("Animal não encontrada."),
             );
           }
 
@@ -535,7 +535,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
 
           if (dados['usuarioId'] != usuario.uid) {
             return const Center(
-              child: Text("Você não tem permissão para visualizar esta vaca."),
+              child: Text("Você não tem permissão para visualizar este animal."),
             );
           }
 

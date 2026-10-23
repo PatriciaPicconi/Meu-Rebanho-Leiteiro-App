@@ -91,7 +91,7 @@ class _TelaToqueState extends State<TelaToque> {
                 });
               },
               decoration: InputDecoration(
-                hintText: "Pesquisar vaca por nome ou brinco...",
+                hintText: "Pesquisar animal por nome ou brinco...",
                 prefixIcon: const Icon(Icons.search),
                 fillColor: Colors.white,
                 filled: true,
@@ -133,7 +133,7 @@ class _TelaToqueState extends State<TelaToque> {
 
           if (documentos.isEmpty) {
             return const Center(
-              child: Text("Nenhuma vaca pendente de toque."),
+              child: Text("Nenhuma animal pendente de toque."),
             );
           }
 
@@ -191,7 +191,7 @@ class _TelaToqueState extends State<TelaToque> {
               _botaoMenu(
                 context,
                 Icons.agriculture,
-                "VACA",
+                "ANIMAL",
                 Colors.green,
                 const TelaVaca(),
               ),

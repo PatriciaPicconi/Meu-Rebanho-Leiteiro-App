@@ -183,7 +183,7 @@ class _TelaVacaState extends State<TelaVaca> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Vaca cadastrada com sucesso."),
+          content: Text("Animal cadastrado com sucesso."),
           backgroundColor: Colors.green,
         ),
       );
@@ -192,7 +192,7 @@ class _TelaVacaState extends State<TelaVaca> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Erro ao cadastrar vaca: $e"),
+          content: Text("Erro ao cadastrar animal: $e"),
           backgroundColor: Colors.red,
         ),
       );
@@ -204,9 +204,9 @@ class _TelaVacaState extends State<TelaVaca> {
       context: context,
       builder: (context) {
         return AlertDialog(
-          title: const Text("Excluir vaca"),
+          title: const Text("Excluir animal"),
           content: const Text(
-            "Deseja realmente excluir esta vaca? Esta ação não poderá ser desfeita.",
+            "Deseja realmente excluir este animal? Esta ação não poderá ser desfeita.",
           ),
           actions: [
             TextButton(
@@ -247,7 +247,7 @@ class _TelaVacaState extends State<TelaVaca> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Text(
-                    "Cadastrar Nova Vaca",
+                    "Cadastrar novo animal",
                     style: TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -352,7 +352,7 @@ class _TelaVacaState extends State<TelaVaca> {
                       ),
                     ),
                     child: const Text(
-                      "SALVAR VACA",
+                      "SALVAR ANIMAL",
                       style: TextStyle(
                         color: Colors.white,
                         fontWeight: FontWeight.bold,
@@ -395,7 +395,7 @@ class _TelaVacaState extends State<TelaVaca> {
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text(
-          "Vacas",
+          "Animal",
           style: TextStyle(
             color: Colors.white,
           ),
@@ -476,7 +476,7 @@ class _TelaVacaState extends State<TelaVaca> {
           if (documentos.isEmpty) {
             return const Center(
               child: Text(
-                "Nenhuma vaca cadastrada para este usuário.",
+                "Nenhum animal cadastrado para este usuário.",
               ),
             );
           }

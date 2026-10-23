@@ -72,7 +72,7 @@ class _InfBaixasState extends State<InfBaixas> {
             ),
             const SizedBox(height: 25),
             _construirCampoInfo(
-              rotulo: "Nome da Vaca",
+              rotulo: "Nome do animal",
               controlador: _nomeController,
               habilitado: _emEdicao,
             ),

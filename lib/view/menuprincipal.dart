@@ -37,7 +37,7 @@ class MenuPrincipal extends StatelessWidget {
           crossAxisSpacing: 20,
           mainAxisSpacing: 20,
           children: [
-            _itemMenu(context, "VACA", Icons.agriculture, Colors.green, const TelaVaca()),
+            _itemMenu(context, "ANIMAL", Icons.agriculture, Colors.green, const TelaVaca()),
             _itemMenu(context, "INSEMINAÇÃO", Icons.vaccines, Colors.blue, const TelaInseminar()),
             _itemMenu(context, "EXAME DE TOQUE", Icons.front_hand, Colors.orange, const TelaToque()),
             _itemMenu(context, "PRENHEZ", Icons.favorite, Colors.red, const TelaPrenhez()),

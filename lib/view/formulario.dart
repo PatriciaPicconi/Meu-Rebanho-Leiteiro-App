@@ -86,7 +86,7 @@ class _FormularioState extends State<Formulario> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text("Vaca cadastrada com sucesso!"),
+            content: Text("Animal cadastrado com sucesso!"),
             backgroundColor: Colors.green,
           ),
         );
@@ -94,7 +94,7 @@ class _FormularioState extends State<Formulario> {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erro ao cadastrar vaca: $e")),
+        SnackBar(content: Text("Erro ao cadastrar animal: $e")),
       );
     }
   }
@@ -113,7 +113,7 @@ class _FormularioState extends State<Formulario> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Cadastrar Nova Vaca", style: TextStyle(color: Colors.white)),
+        title: const Text("Cadastrar novo animal", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         iconTheme: const IconThemeData(color: Colors.white),
       ),

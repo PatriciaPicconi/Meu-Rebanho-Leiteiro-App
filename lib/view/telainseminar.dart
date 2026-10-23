@@ -195,7 +195,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
                 if (snapshot.hasError) {
                   return const Center(
                     child: Text(
-                      'Erro ao carregar as vacas.',
+                      'Erro ao carregar os animais.',
                     ),
                   );
                 }
@@ -240,7 +240,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
                     child: Padding(
                       padding: EdgeInsets.all(24),
                       child: Text(
-                        'Nenhuma vaca disponível para inseminação.',
+                        'Nenhuma animal disponível para inseminação.',
                         textAlign: TextAlign.center,
                         style: TextStyle(
                           fontSize: 16,
@@ -345,7 +345,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
               _botaoMenu(
                 context,
                 Icons.agriculture,
-                'VACAS',
+                'ANIMAL',
                 Colors.green,
                 const TelaVaca(),
               ),

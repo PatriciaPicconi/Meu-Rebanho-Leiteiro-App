@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/services.dart';
 
 import 'firebase_options.dart';
 import 'view/verificar_login.dart';
@@ -11,6 +12,19 @@ void main() async {
     options: DefaultFirebaseOptions.currentPlatform,
   );
 
+  Future<void> main() async {
+    WidgetsFlutterBinding.ensureInitialized();
+
+    await Firebase.initializeApp(
+      options: DefaultFirebaseOptions.currentPlatform,
+    );
+
+    await SystemChrome.setEnabledSystemUIMode(
+      SystemUiMode.immersiveSticky,
+    );
+
+    runApp(const MeuRebanhoApp());
+  }
   runApp(const MeuRebanhoApp());
 }
 
