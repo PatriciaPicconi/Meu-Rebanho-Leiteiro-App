@@ -9,7 +9,8 @@ class TelaCadastroUsuario extends StatefulWidget {
   const TelaCadastroUsuario({super.key});
 
   @override
-  State<TelaCadastroUsuario> createState() => _TelaCadastroUsuarioState();
+  State<TelaCadastroUsuario> createState() =>
+      _TelaCadastroUsuarioState();
 }
 
 class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
@@ -46,7 +47,6 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
     _propriedadeController.dispose();
     _cidadeController.dispose();
     _estadoController.dispose();
-
     super.dispose();
   }
 
@@ -58,10 +58,10 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
       lastDate: DateTime.now(),
     );
 
-    if (dataSelecionada != null) {
+    if (dataSelecionada != null && mounted) {
       setState(() {
         _dataNascimentoController.text =
-        "${dataSelecionada.day.toString().padLeft(2, '0')}/"
+            "${dataSelecionada.day.toString().padLeft(2, '0')}/"
             "${dataSelecionada.month.toString().padLeft(2, '0')}/"
             "${dataSelecionada.year}";
       });
@@ -101,22 +101,22 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
   }
 
   Future<void> _cadastrarUsuario() async {
-    // Primeiro valida os campos do cadastro
+    // Valida os campos do cadastro
     if (!_formKey.currentState!.validate()) {
       return;
     }
 
-    // Depois verifica os documentos
+    // Verifica os documentos
     if (!_leuTermos || !_leuPolitica || !_aceitouTermos) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Leia os Termos de Uso e a Política de Privacidade e marque a concordância para continuar.',
+            'Leia os Termos de Uso e a Política de Privacidade '
+            'e marque a concordância para continuar.',
           ),
           backgroundColor: Colors.orange,
         ),
       );
-
       return;
     }
 
@@ -127,15 +127,18 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
     try {
       // Cria a conta no Firebase Authentication
       final credencial =
-      await FirebaseAuth.instance.createUserWithEmailAndPassword(
+          await FirebaseAuth.instance.createUserWithEmailAndPassword(
         email: _emailController.text.trim(),
-        password: _senhaController.text.trim(),
+        password: _senhaController.text,
       );
 
       final uid = credencial.user!.uid;
 
       // Salva os dados do usuário no Firestore
-      await FirebaseFirestore.instance.collection('usuarios').doc(uid).set({
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(uid)
+          .set({
         'uid': uid,
         'nome': _nomeController.text.trim(),
         'email': _emailController.text.trim(),
@@ -163,9 +166,7 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            "Usuário cadastrado com sucesso!",
-          ),
+          content: Text("Usuário cadastrado com sucesso!"),
           backgroundColor: Colors.green,
         ),
       );
@@ -184,24 +185,28 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
       } else if (e.code == 'invalid-email') {
         mensagem = "Informe um e-mail válido.";
       } else if (e.code == 'weak-password') {
-        mensagem = "A senha deve ter pelo menos 6 caracteres.";
+        mensagem =
+            "A senha precisa ter 8 caracteres, letras maiúsculas, "
+            "minúsculas e números.";
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(mensagem),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            "Erro inesperado: $e",
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(mensagem),
+            backgroundColor: Colors.red,
           ),
-          backgroundColor: Colors.red,
-        ),
-      );
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Erro inesperado: $e"),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -212,9 +217,9 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
   }
 
   InputDecoration _decoracaoCampo(
-      String label,
-      IconData icone,
-      ) {
+    String label,
+    IconData icone,
+  ) {
     return InputDecoration(
       labelText: label,
       prefixIcon: Icon(
@@ -254,13 +259,26 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
     return null;
   }
 
+  // Valida os requisitos da senha
   String? _validarSenha(String? valor) {
-    if (valor == null || valor.trim().isEmpty) {
+    if (valor == null || valor.isEmpty) {
       return "Campo obrigatório";
     }
 
-    if (valor.length < 6) {
-      return "A senha deve ter pelo menos 6 caracteres";
+    if (valor.length < 8) {
+      return "A senha deve ter pelo menos 8 caracteres";
+    }
+
+    if (!RegExp(r'[A-Z]').hasMatch(valor)) {
+      return "Inclua pelo menos uma letra maiúscula";
+    }
+
+    if (!RegExp(r'[a-z]').hasMatch(valor)) {
+      return "Inclua pelo menos uma letra minúscula";
+    }
+
+    if (!RegExp(r'[0-9]').hasMatch(valor)) {
+      return "Inclua pelo menos um número";
     }
 
     return null;
@@ -270,7 +288,6 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFEAF3E8),
-
       appBar: AppBar(
         title: const Text(
           "Cadastro de Usuário",
@@ -284,13 +301,10 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
           color: Colors.white,
         ),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
-
         child: Container(
           padding: const EdgeInsets.all(18),
-
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
@@ -302,10 +316,8 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
               ),
             ],
           ),
-
           child: Form(
             key: _formKey,
-
             child: Column(
               children: [
                 const Icon(
@@ -313,9 +325,7 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                   size: 90,
                   color: Colors.green,
                 ),
-
                 const SizedBox(height: 8),
-
                 const Text(
                   "Criar Perfil do Produtor",
                   style: TextStyle(
@@ -324,9 +334,7 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                     color: Colors.green,
                   ),
                 ),
-
                 const SizedBox(height: 6),
-
                 const Text(
                   "Preencha os dados para gerenciar o rebanho leiteiro.",
                   textAlign: TextAlign.center,
@@ -334,7 +342,6 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                     color: Colors.black54,
                   ),
                 ),
-
                 const SizedBox(height: 24),
 
                 // NOME
@@ -346,7 +353,6 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                   ),
                   validator: _validarCampoObrigatorio,
                 ),
-
                 const SizedBox(height: 14),
 
                 // E-MAIL
@@ -359,18 +365,21 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                   ),
                   validator: _validarEmail,
                 ),
-
                 const SizedBox(height: 14),
 
                 // SENHA
                 TextFormField(
                   controller: _senhaController,
                   obscureText: !_mostrarSenha,
-
+                  autocorrect: false,
+                  enableSuggestions: false,
                   decoration: _decoracaoCampo(
                     "Senha",
                     Icons.lock,
                   ).copyWith(
+                    helperText:
+                        "Mínimo de 8 caracteres, com maiúscula, "
+                        "minúscula e número",
                     suffixIcon: IconButton(
                       icon: Icon(
                         _mostrarSenha
@@ -384,10 +393,8 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                       },
                     ),
                   ),
-
                   validator: _validarSenha,
                 ),
-
                 const SizedBox(height: 14),
 
                 // DATA DE NASCIMENTO
@@ -395,43 +402,34 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                   controller: _dataNascimentoController,
                   readOnly: true,
                   onTap: _selecionarDataNascimento,
-
                   decoration: _decoracaoCampo(
                     "Data de nascimento",
                     Icons.calendar_month,
                   ),
-
                   validator: _validarCampoObrigatorio,
                 ),
-
                 const SizedBox(height: 14),
 
                 // PROPRIEDADE
                 TextFormField(
                   controller: _propriedadeController,
-
                   decoration: _decoracaoCampo(
                     "Nome da propriedade / sítio / fazenda",
                     Icons.home_work,
                   ),
-
                   validator: _validarCampoObrigatorio,
                 ),
-
                 const SizedBox(height: 14),
 
                 // CIDADE
                 TextFormField(
                   controller: _cidadeController,
-
                   decoration: _decoracaoCampo(
                     "Cidade",
                     Icons.location_city,
                   ),
-
                   validator: _validarCampoObrigatorio,
                 ),
-
                 const SizedBox(height: 14),
 
                 // ESTADO
@@ -439,28 +437,23 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                   controller: _estadoController,
                   maxLength: 2,
                   textCapitalization: TextCapitalization.characters,
-
                   decoration: _decoracaoCampo(
                     "Estado",
                     Icons.map,
                   ).copyWith(
                     counterText: "",
                   ),
-
                   validator: _validarCampoObrigatorio,
                 ),
-
                 const SizedBox(height: 14),
 
                 // TIPO DE USUÁRIO
                 DropdownButtonFormField<String>(
                   value: _tipoUsuario,
-
                   decoration: _decoracaoCampo(
                     "Tipo de usuário",
                     Icons.badge,
                   ),
-
                   items: const [
                     DropdownMenuItem(
                       value: "Produtor Rural",
@@ -479,7 +472,6 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                       child: Text("Administrador"),
                     ),
                   ],
-
                   onChanged: (valor) {
                     if (valor != null) {
                       setState(() {
@@ -488,16 +480,11 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                     }
                   },
                 ),
-
                 const SizedBox(height: 16),
 
-                // ==========================================================
                 // TERMOS E POLÍTICA
-                // ==========================================================
-
                 Container(
                   padding: const EdgeInsets.all(12),
-
                   decoration: BoxDecoration(
                     color: Colors.green.shade50,
                     borderRadius: BorderRadius.circular(12),
@@ -505,10 +492,8 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                       color: Colors.green.shade100,
                     ),
                   ),
-
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
-
                     children: [
                       const Text(
                         "Antes de criar sua conta",
@@ -517,22 +502,19 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                           fontSize: 16,
                         ),
                       ),
-
                       const SizedBox(height: 6),
-
                       const Text(
-                        "Leia os Termos de Uso e a Política de Privacidade antes de concluir o cadastro.",
+                        "Leia os Termos de Uso e a Política de Privacidade "
+                        "antes de concluir o cadastro.",
                         style: TextStyle(
                           color: Colors.black54,
                         ),
                       ),
-
                       const SizedBox(height: 12),
 
                       // TERMOS DE USO
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-
                         leading: Icon(
                           _leuTermos
                               ? Icons.check_circle
@@ -541,11 +523,7 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                               ? Colors.green
                               : Colors.purple,
                         ),
-
-                        title: const Text(
-                          "Termos de Uso",
-                        ),
-
+                        title: const Text("Termos de Uso"),
                         subtitle: Text(
                           _leuTermos
                               ? "Leitura concluída"
@@ -556,13 +534,10 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                                 : Colors.black54,
                           ),
                         ),
-
                         trailing: TextButton(
                           onPressed: _abrirTermos,
                           child: Text(
-                            _leuTermos
-                                ? "Ler novamente"
-                                : "Ler",
+                            _leuTermos ? "Ler novamente" : "Ler",
                           ),
                         ),
                       ),
@@ -570,7 +545,6 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                       // POLÍTICA DE PRIVACIDADE
                       ListTile(
                         contentPadding: EdgeInsets.zero,
-
                         leading: Icon(
                           _leuPolitica
                               ? Icons.check_circle
@@ -579,11 +553,7 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                               ? Colors.green
                               : Colors.purple,
                         ),
-
-                        title: const Text(
-                          "Política de Privacidade",
-                        ),
-
+                        title: const Text("Política de Privacidade"),
                         subtitle: Text(
                           _leuPolitica
                               ? "Leitura concluída"
@@ -594,79 +564,63 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
                                 : Colors.black54,
                           ),
                         ),
-
                         trailing: TextButton(
                           onPressed: _abrirPolitica,
                           child: Text(
-                            _leuPolitica
-                                ? "Ler novamente"
-                                : "Ler",
+                            _leuPolitica ? "Ler novamente" : "Ler",
                           ),
                         ),
                       ),
-
                       const Divider(),
 
                       // ACEITE
                       CheckboxListTile(
                         contentPadding: EdgeInsets.zero,
-
                         controlAffinity:
-                        ListTileControlAffinity.leading,
-
+                            ListTileControlAffinity.leading,
                         value: _aceitouTermos,
-
-                        onChanged:
-                        (!_leuTermos || !_leuPolitica)
+                        onChanged: (!_leuTermos || !_leuPolitica)
                             ? null
                             : (valor) {
-                          setState(() {
-                            _aceitouTermos =
-                                valor ?? false;
-                          });
-                        },
-
+                                setState(() {
+                                  _aceitouTermos = valor ?? false;
+                                });
+                              },
                         title: const Text(
-                          "Li e concordo com os Termos de Uso e estou ciente da Política de Privacidade.",
+                          "Li e concordo com os Termos de Uso e estou "
+                          "ciente da Política de Privacidade.",
                         ),
                       ),
                     ],
                   ),
                 ),
-
                 const SizedBox(height: 26),
 
                 // BOTÃO CADASTRAR
                 SizedBox(
                   width: double.infinity,
                   height: 48,
-
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-
                       shape: RoundedRectangleBorder(
-                        borderRadius:
-                        BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-
-                    onPressed:
-                    (_carregando || !_aceitouTermos)
+                    onPressed: (_carregando || !_aceitouTermos)
                         ? null
                         : _cadastrarUsuario,
-
                     child: _carregando
                         ? const CircularProgressIndicator(
-                      color: Colors.white,
-                    )
+                            color: Colors.white,
+                          )
                         : const Text(
-                      "CADASTRAR",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
+                            "CADASTRAR",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                   ),
                 ),
               ],

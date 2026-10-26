@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
-
 import 'telainseminar.dart';
 import 'telatoque.dart';
 import 'telaprenhez.dart';
@@ -10,14 +9,11 @@ import 'telaperfil.dart';
 import 'tela_historico.dart';
 import 'tela_baixas.dart';
 import 'tela_detalhe_vaca.dart';
-
 class TelaVaca extends StatefulWidget {
   const TelaVaca({super.key});
-
   @override
   State<TelaVaca> createState() => _TelaVacaState();
 }
-
 class _TelaVacaState extends State<TelaVaca> {
   final _nomeController = TextEditingController();
   final _brincoController = TextEditingController();
@@ -25,18 +21,16 @@ class _TelaVacaState extends State<TelaVaca> {
   final _dataNasciController = TextEditingController();
   final _partoController = TextEditingController();
   final _buscaController = TextEditingController();
-
   String? _statusSelecionado = "Vazia";
   String _busca = "";
-
+  bool _ehTouro = false;
+  String _filtroTipo = "todos";
   final maskFormatter = MaskTextInputFormatter(
     mask: '##/##/####',
     filter: {"#": RegExp(r'[0-9]')},
     type: MaskAutoCompletionType.lazy,
   );
-
   String? get _usuarioId => FirebaseAuth.instance.currentUser?.uid;
-
   @override
   void dispose() {
     _nomeController.dispose();
@@ -47,7 +41,6 @@ class _TelaVacaState extends State<TelaVaca> {
     _buscaController.dispose();
     super.dispose();
   }
-
   Widget _botaoMenu(
       BuildContext context,
       IconData icone,
@@ -81,16 +74,13 @@ class _TelaVacaState extends State<TelaVaca> {
       ),
     );
   }
-
   Future<void> _excluirVaca(String id) async {
     try {
       await FirebaseFirestore.instance
           .collection('vacas')
           .doc(id)
           .delete();
-
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Vaca excluída com sucesso."),
@@ -99,7 +89,6 @@ class _TelaVacaState extends State<TelaVaca> {
       );
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Erro ao excluir vaca: $e"),
@@ -108,10 +97,8 @@ class _TelaVacaState extends State<TelaVaca> {
       );
     }
   }
-
   Future<void> _adicionarVaca() async {
     final usuarioId = _usuarioId;
-
     if (usuarioId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -119,68 +106,69 @@ class _TelaVacaState extends State<TelaVaca> {
           backgroundColor: Colors.red,
         ),
       );
-
       return;
     }
-
+    final nome = _nomeController.text.trim();
+    final brinco = _brincoController.text.trim();
+    if (nome.isEmpty || brinco.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Nome e brinco são obrigatórios!"),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+    if (!_ehTouro && (_statusSelecionado == null || _statusSelecionado!.isEmpty)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Selecione o status reprodutivo da vaca."),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
     try {
-      final nome = _nomeController.text.trim();
-      final brinco = _brincoController.text.trim();
-
-      if (nome.isEmpty || brinco.isEmpty) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Nome e brinco são obrigatórios!"),
-            backgroundColor: Colors.red,
-          ),
-        );
-
-        return;
-      }
-
       final queryDuplicados = await FirebaseFirestore.instance
           .collection('vacas')
           .where('usuarioId', isEqualTo: usuarioId)
           .where('brinco', isEqualTo: brinco)
           .get();
-
       if (queryDuplicados.docs.isNotEmpty) {
+        if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              "Já existe uma vaca com este brinco na sua conta.",
+              "Já existe um animal com o brinco $brinco na sua conta.",
             ),
             backgroundColor: Colors.red,
           ),
         );
-
         return;
       }
-
       await FirebaseFirestore.instance.collection('vacas').add({
         'usuarioId': usuarioId,
         'nome': nome,
         'brinco': brinco,
+        'tipoAnimal': _ehTouro ? 'touro' : 'vaca',
         'dataNascimento': _dataNasciController.text.trim(),
-        'status': _statusSelecionado ?? "Vazia",
+        'status': _ehTouro ? null : _statusSelecionado,
         'raca': _racaController.text.trim(),
-        'ultimoParto': _partoController.text.trim(),
+        'ultimoParto': _ehTouro ? '' : _partoController.text.trim(),
         'ultimaInseminacao': '',
         'ultimoExameToque': '',
         'dataCriacao': FieldValue.serverTimestamp(),
         'dataAtualizacao': FieldValue.serverTimestamp(),
       });
-
       _nomeController.clear();
       _brincoController.clear();
       _racaController.clear();
       _dataNasciController.clear();
       _partoController.clear();
-
+      _statusSelecionado = "Vazia";
+      _ehTouro = false;
       if (!mounted) return;
-
       Navigator.pop(context);
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Animal cadastrado com sucesso."),
@@ -189,7 +177,6 @@ class _TelaVacaState extends State<TelaVaca> {
       );
     } catch (e) {
       if (!mounted) return;
-
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text("Erro ao cadastrar animal: $e"),
@@ -198,7 +185,6 @@ class _TelaVacaState extends State<TelaVaca> {
       );
     }
   }
-
   void _confirmarExclusao(String id) {
     showDialog(
       context: context,
@@ -231,7 +217,6 @@ class _TelaVacaState extends State<TelaVaca> {
       },
     );
   }
-
   void _abrirFormulario() {
     showDialog(
       context: context,
@@ -254,9 +239,24 @@ class _TelaVacaState extends State<TelaVaca> {
                       color: Colors.green,
                     ),
                   ),
-
                   const SizedBox(height: 15),
-
+                  CheckboxListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: const Text("Este animal é um touro?"),
+                    subtitle: const Text(
+                      "Se não marcar, será cadastrado como vaca.",
+                    ),
+                    value: _ehTouro,
+                    onChanged: (valor) {
+                      setModalState(() {
+                        _ehTouro = valor ?? false;
+                        _statusSelecionado = _ehTouro ? null : "Vazia";
+                        if (_ehTouro) {
+                          _partoController.clear();
+                        }
+                      });
+                    },
+                  ),
                   TextField(
                     controller: _nomeController,
                     decoration: const InputDecoration(
@@ -264,7 +264,6 @@ class _TelaVacaState extends State<TelaVaca> {
                       prefixIcon: Icon(Icons.badge),
                     ),
                   ),
-
                   TextField(
                     controller: _brincoController,
                     decoration: const InputDecoration(
@@ -274,7 +273,6 @@ class _TelaVacaState extends State<TelaVaca> {
                       ),
                     ),
                   ),
-
                   TextField(
                     controller: _racaController,
                     decoration: const InputDecoration(
@@ -282,7 +280,6 @@ class _TelaVacaState extends State<TelaVaca> {
                       prefixIcon: Icon(Icons.pets),
                     ),
                   ),
-
                   TextField(
                     controller: _dataNasciController,
                     inputFormatters: [maskFormatter],
@@ -294,19 +291,19 @@ class _TelaVacaState extends State<TelaVaca> {
                     ),
                     keyboardType: TextInputType.number,
                   ),
-
-                  TextField(
-                    controller: _partoController,
-                    inputFormatters: [maskFormatter],
-                    decoration: const InputDecoration(
-                      labelText: "Data do Último Parto",
-                      prefixIcon: Icon(Icons.child_care),
+                  if (!_ehTouro)
+                    TextField(
+                      controller: _partoController,
+                      inputFormatters: [maskFormatter],
+                      decoration: const InputDecoration(
+                        labelText: "Data do Último Parto",
+                        prefixIcon: Icon(Icons.child_care),
+                      ),
+                      keyboardType: TextInputType.number,
                     ),
-                    keyboardType: TextInputType.number,
-                  ),
-
-                  DropdownButtonFormField<String>(
-                    value: _statusSelecionado,
+                  if (!_ehTouro)
+                    DropdownButtonFormField<String>(
+                    initialValue: _statusSelecionado ?? "Vazia",
                     decoration: const InputDecoration(
                       labelText: "Status",
                       prefixIcon: Icon(Icons.info),
@@ -339,9 +336,7 @@ class _TelaVacaState extends State<TelaVaca> {
                       });
                     },
                   ),
-
                   const SizedBox(height: 25),
-
                   ElevatedButton(
                     onPressed: _adicionarVaca,
                     style: ElevatedButton.styleFrom(
@@ -367,7 +362,6 @@ class _TelaVacaState extends State<TelaVaca> {
       ),
     );
   }
-
   void _abrirDetalhes(String vacaId) {
     Navigator.push(
       context,
@@ -378,11 +372,9 @@ class _TelaVacaState extends State<TelaVaca> {
       ),
     );
   }
-
   @override
   Widget build(BuildContext context) {
     final usuarioId = _usuarioId;
-
     if (usuarioId == null) {
       return const Scaffold(
         body: Center(
@@ -390,7 +382,6 @@ class _TelaVacaState extends State<TelaVaca> {
         ),
       );
     }
-
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -405,30 +396,89 @@ class _TelaVacaState extends State<TelaVaca> {
           color: Colors.white,
         ),
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(60),
+          preferredSize: const Size.fromHeight(116),
           child: Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _buscaController,
-              onChanged: (value) {
-                setState(() {
-                  _busca = value.toLowerCase();
-                });
-              },
-              decoration: InputDecoration(
-                hintText: "Pesquisar por nome ou brinco...",
-                prefixIcon: const Icon(Icons.search),
-                fillColor: Colors.white,
-                filled: true,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(10),
+            padding: const EdgeInsets.fromLTRB(8, 0, 8, 8),
+            child: Column(
+              children: [
+                TextField(
+                  controller: _buscaController,
+                  onChanged: (value) {
+                    setState(() {
+                      _busca = value.toLowerCase().trim();
+                    });
+                  },
+                  decoration: InputDecoration(
+                    hintText: "Pesquisar por nome ou brinco...",
+                    prefixIcon: const Icon(Icons.search),
+                    fillColor: Colors.white,
+                    filled: true,
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<String>(
+                        value: _filtroTipo,
+                        decoration: InputDecoration(
+                          hintText: "Filtrar animais",
+                          isDense: true,
+                          filled: true,
+                          fillColor: Colors.white,
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 8,
+                          ),
+                        ),
+                        items: const [
+                          DropdownMenuItem(
+                            value: "todos",
+                            child: Text("Todos os animais"),
+                          ),
+                          DropdownMenuItem(
+                            value: "vaca",
+                            child: Text("Apenas vacas"),
+                          ),
+                          DropdownMenuItem(
+                            value: "touro",
+                            child: Text("Apenas touros"),
+                          ),
+                        ],
+                        onChanged: (valor) {
+                          setState(() {
+                            _filtroTipo = valor ?? "todos";
+                          });
+                        },
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: "Limpar filtros",
+                      icon: const Icon(
+                        Icons.filter_alt_off,
+                        color: Colors.white,
+                      ),
+                      onPressed: () {
+                        setState(() {
+                          _filtroTipo = "todos";
+                          _busca = "";
+                          _buscaController.clear();
+                        });
+                      },
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
         ),
       ),
-
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('vacas')
@@ -437,7 +487,6 @@ class _TelaVacaState extends State<TelaVaca> {
           isEqualTo: usuarioId,
         )
             .snapshots(),
-
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(
@@ -446,33 +495,28 @@ class _TelaVacaState extends State<TelaVaca> {
               ),
             );
           }
-
           if (snapshot.connectionState ==
               ConnectionState.waiting) {
             return const Center(
               child: CircularProgressIndicator(
-                color: Colors.green,
+              color: Colors.green,
               ),
             );
           }
-
-          final documentos =
-          snapshot.data!.docs.where((doc) {
-            final dados =
-            doc.data() as Map<String, dynamic>;
-
-            final nome = (dados['nome'] ?? "")
+          final documentos = snapshot.data!.docs.where((doc) {
+            final dados = doc.data() as Map<String, dynamic>;
+            final nome = (dados['nome'] ?? "").toString().toLowerCase();
+            final brinco = (dados['brinco'] ?? "").toString().toLowerCase();
+            // Registros antigos, sem tipoAnimal, continuam sendo tratados como vacas.
+            final tipo = (dados['tipoAnimal'] ?? 'vaca')
                 .toString()
                 .toLowerCase();
-
-            final brinco = (dados['brinco'] ?? "")
-                .toString()
-                .toLowerCase();
-
-            return nome.contains(_busca) ||
-                brinco.contains(_busca);
+            final correspondeBusca =
+                nome.contains(_busca) || brinco.contains(_busca);
+            final correspondeTipo =
+                _filtroTipo == "todos" || tipo == _filtroTipo;
+            return correspondeBusca && correspondeTipo;
           }).toList();
-
           if (documentos.isEmpty) {
             return const Center(
               child: Text(
@@ -480,15 +524,12 @@ class _TelaVacaState extends State<TelaVaca> {
               ),
             );
           }
-
           return ListView.builder(
             itemCount: documentos.length,
             itemBuilder: (context, index) {
               final doc = documentos[index];
-
               final vaca =
               doc.data() as Map<String, dynamic>;
-
               return Card(
                 margin: const EdgeInsets.symmetric(
                   horizontal: 15,
@@ -496,7 +537,6 @@ class _TelaVacaState extends State<TelaVaca> {
                 ),
                 child: ListTile(
                   onTap: () => _abrirDetalhes(doc.id),
-
                   leading: const CircleAvatar(
                     backgroundColor: Colors.green,
                     child: Icon(
@@ -504,38 +544,32 @@ class _TelaVacaState extends State<TelaVaca> {
                       color: Colors.white,
                     ),
                   ),
-
                   title: Text(
                     vaca['nome'] ?? 'Sem nome',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
-
                   subtitle: Text(
-                    "Brinco: ${vaca['brinco'] ?? '--'} | "
-                        "Parto: ${vaca['ultimoParto'] ?? '--'}",
+                    (vaca['tipoAnimal'] ?? 'vaca').toString().toLowerCase() ==
+                            'touro'
+                        ? "Brinco: ${vaca['brinco'] ?? '--'}"
+                        : "Brinco: ${vaca['brinco'] ?? '--'} | "
+                            "Parto: ${vaca['ultimoParto'] ?? '--'}",
                   ),
-
                   trailing: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Text(
-                        vaca['status'] ?? "",
+                        (vaca['tipoAnimal'] ?? 'vaca').toString().toLowerCase() ==
+                                'touro'
+                            ? "Touro"
+                            : (vaca['status'] ?? "").toString(),
                         style: const TextStyle(
                           fontWeight: FontWeight.w500,
                           color: Colors.green,
                         ),
                       ),
-
-                      /**IconButton(
-                          icon: const Icon(
-                          Icons.delete,
-                          color: Colors.red,
-                          ),
-                          onPressed: () =>
-                          _confirmarExclusao(doc.id),
-                          ),**/
                     ],
                   ),
                 ),
@@ -544,7 +578,6 @@ class _TelaVacaState extends State<TelaVaca> {
           );
         },
       ),
-
       floatingActionButton: FloatingActionButton(
         onPressed: _abrirFormulario,
         backgroundColor: Colors.green,
@@ -553,17 +586,13 @@ class _TelaVacaState extends State<TelaVaca> {
           color: Colors.white,
         ),
       ),
-
       bottomNavigationBar: BottomAppBar(
         color: Colors.green,
-
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-
           child: Row(
             mainAxisAlignment:
             MainAxisAlignment.spaceEvenly,
-
             children: [
               _botaoMenu(
                 context,
@@ -572,7 +601,6 @@ class _TelaVacaState extends State<TelaVaca> {
                 Colors.blue,
                 const TelaInseminar(),
               ),
-
               _botaoMenu(
                 context,
                 Icons.front_hand,
@@ -580,7 +608,6 @@ class _TelaVacaState extends State<TelaVaca> {
                 Colors.orange,
                 const TelaToque(),
               ),
-
               _botaoMenu(
                 context,
                 Icons.favorite,
@@ -588,7 +615,6 @@ class _TelaVacaState extends State<TelaVaca> {
                 Colors.redAccent,
                 const TelaPrenhez(),
               ),
-
               _botaoMenu(
                 context,
                 Icons.history,
@@ -596,7 +622,6 @@ class _TelaVacaState extends State<TelaVaca> {
                 Colors.white,
                 const TelaHistorico(),
               ),
-
               _botaoMenu(
                 context,
                 Icons.trending_down,
@@ -604,7 +629,6 @@ class _TelaVacaState extends State<TelaVaca> {
                 Colors.black54,
                 const TelaBaixas(),
               ),
-
               _botaoMenu(
                 context,
                 Icons.person,
