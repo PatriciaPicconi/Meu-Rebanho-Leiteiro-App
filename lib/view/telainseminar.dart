@@ -225,14 +225,15 @@ class _TelaInseminarState extends State<TelaInseminar> {
                     return false;
                   }
 
-                  final status =
-                      dados['status']
-                          ?.toString()
-                          .toLowerCase() ??
-                          '';
+                  final status = (dados['status'] ?? '')
+                      .toString()
+                      .trim()
+                      .toLowerCase();
 
                   return status == 'vazia' ||
+                      status == 'seca' ||
                       status == 'inseminar';
+
                 }).toList();
 
                 if (vacasFiltradas.isEmpty) {
@@ -498,15 +499,17 @@ class _FormularioInseminarState
       });
 
       try {
-        await GoogleCalendarService
-            .criarLembreteVerificacaoPrenhez(
-          nomeVaca: nome,
-          brinco: brinco,
-          dataInseminacao:
-          _dataController.text.trim(),
-          touro:
-          _touroController.text.trim(),
-        );
+      
+      await FirebaseFirestore.instance
+          .collection('vacas')
+          .doc(widget.vacaId)
+          .update({
+        'usuarioId': usuarioId,
+        'status': 'Inseminada',
+        'dataInseminacao':
+            _dataController.text.trim(),
+      });
+
       } catch (_) {
         // O cadastro continua mesmo se o Google Agenda não abrir.
       }
@@ -592,28 +595,25 @@ class _FormularioInseminarState
                 controller: _dataController,
                 readOnly: true,
                 onTap: _selecionarData,
-                decoration:
-                InputDecoration(
-                  labelText:
-                  'Data da inseminação',
+                decoration: InputDecoration(
+                  labelText: 'Data da inseminação *',
+                  hintText: 'DD/MM/AAAA',
                   prefixIcon: const Icon(
                     Icons.calendar_month,
                     color: Colors.lightBlue,
                   ),
-                  border:
-                  OutlineInputBorder(
-                    borderRadius:
-                    BorderRadius.circular(
-                      12,
-                    ),
+                  suffixIcon: const Icon(
+                    Icons.arrow_drop_down,
+                    color: Colors.lightBlue,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 validator: (valor) {
-                  if (valor == null ||
-                      valor.isEmpty) {
-                    return 'Informe a data.';
+                  if (valor == null || valor.trim().isEmpty) {
+                    return 'Informe a data da inseminação.';
                   }
-
                   return null;
                 },
               ),
