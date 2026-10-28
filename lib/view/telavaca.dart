@@ -9,11 +9,14 @@ import 'telaperfil.dart';
 import 'tela_historico.dart';
 import 'tela_baixas.dart';
 import 'tela_detalhe_vaca.dart';
+
 class TelaVaca extends StatefulWidget {
   const TelaVaca({super.key});
+
   @override
   State<TelaVaca> createState() => _TelaVacaState();
 }
+
 class _TelaVacaState extends State<TelaVaca> {
   final _nomeController = TextEditingController();
   final _brincoController = TextEditingController();
@@ -21,16 +24,20 @@ class _TelaVacaState extends State<TelaVaca> {
   final _dataNasciController = TextEditingController();
   final _partoController = TextEditingController();
   final _buscaController = TextEditingController();
+
   String? _statusSelecionado = "Vazia";
   String _busca = "";
   bool _ehTouro = false;
   String _filtroTipo = "todos";
+
   final maskFormatter = MaskTextInputFormatter(
     mask: '##/##/####',
     filter: {"#": RegExp(r'[0-9]')},
     type: MaskAutoCompletionType.lazy,
   );
+
   String? get _usuarioId => FirebaseAuth.instance.currentUser?.uid;
+
   @override
   void dispose() {
     _nomeController.dispose();
@@ -41,13 +48,14 @@ class _TelaVacaState extends State<TelaVaca> {
     _buscaController.dispose();
     super.dispose();
   }
+
   Widget _botaoMenu(
-      BuildContext context,
-      IconData icone,
-      String label,
-      Color corIcone,
-      Widget tela,
-      ) {
+    BuildContext context,
+    IconData icone,
+    String label,
+    Color corIcone,
+    Widget tela,
+  ) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(
         context,
@@ -56,11 +64,7 @@ class _TelaVacaState extends State<TelaVaca> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icone,
-            color: corIcone,
-            size: 22,
-          ),
+          Icon(icone, color: corIcone, size: 22),
           const SizedBox(height: 4),
           Text(
             label,
@@ -74,12 +78,11 @@ class _TelaVacaState extends State<TelaVaca> {
       ),
     );
   }
+
   Future<void> _excluirVaca(String id) async {
     try {
-      await FirebaseFirestore.instance
-          .collection('vacas')
-          .doc(id)
-          .delete();
+      await FirebaseFirestore.instance.collection('vacas').doc(id).delete();
+
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -97,8 +100,10 @@ class _TelaVacaState extends State<TelaVaca> {
       );
     }
   }
+
   Future<void> _adicionarVaca() async {
     final usuarioId = _usuarioId;
+
     if (usuarioId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -108,8 +113,10 @@ class _TelaVacaState extends State<TelaVaca> {
       );
       return;
     }
+
     final nome = _nomeController.text.trim();
     final brinco = _brincoController.text.trim();
+
     if (nome.isEmpty || brinco.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -119,7 +126,9 @@ class _TelaVacaState extends State<TelaVaca> {
       );
       return;
     }
-    if (!_ehTouro && (_statusSelecionado == null || _statusSelecionado!.isEmpty)) {
+
+    if (!_ehTouro &&
+        (_statusSelecionado == null || _statusSelecionado!.isEmpty)) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Selecione o status reprodutivo da vaca."),
@@ -128,12 +137,14 @@ class _TelaVacaState extends State<TelaVaca> {
       );
       return;
     }
+
     try {
       final queryDuplicados = await FirebaseFirestore.instance
           .collection('vacas')
           .where('usuarioId', isEqualTo: usuarioId)
           .where('brinco', isEqualTo: brinco)
           .get();
+
       if (queryDuplicados.docs.isNotEmpty) {
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
@@ -146,6 +157,7 @@ class _TelaVacaState extends State<TelaVaca> {
         );
         return;
       }
+
       await FirebaseFirestore.instance.collection('vacas').add({
         'usuarioId': usuarioId,
         'nome': nome,
@@ -160,6 +172,7 @@ class _TelaVacaState extends State<TelaVaca> {
         'dataCriacao': FieldValue.serverTimestamp(),
         'dataAtualizacao': FieldValue.serverTimestamp(),
       });
+
       _nomeController.clear();
       _brincoController.clear();
       _racaController.clear();
@@ -167,6 +180,7 @@ class _TelaVacaState extends State<TelaVaca> {
       _partoController.clear();
       _statusSelecionado = "Vazia";
       _ehTouro = false;
+
       if (!mounted) return;
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -185,6 +199,7 @@ class _TelaVacaState extends State<TelaVaca> {
       );
     }
   }
+
   void _confirmarExclusao(String id) {
     showDialog(
       context: context,
@@ -217,6 +232,7 @@ class _TelaVacaState extends State<TelaVaca> {
       },
     );
   }
+
   void _abrirFormulario() {
     showDialog(
       context: context,
@@ -251,9 +267,7 @@ class _TelaVacaState extends State<TelaVaca> {
                       setModalState(() {
                         _ehTouro = valor ?? false;
                         _statusSelecionado = _ehTouro ? null : "Vazia";
-                        if (_ehTouro) {
-                          _partoController.clear();
-                        }
+                        if (_ehTouro) _partoController.clear();
                       });
                     },
                   ),
@@ -268,9 +282,7 @@ class _TelaVacaState extends State<TelaVaca> {
                     controller: _brincoController,
                     decoration: const InputDecoration(
                       labelText: "Brinco",
-                      prefixIcon: Icon(
-                        Icons.confirmation_number,
-                      ),
+                      prefixIcon: Icon(Icons.confirmation_number),
                     ),
                   ),
                   TextField(
@@ -285,9 +297,7 @@ class _TelaVacaState extends State<TelaVaca> {
                     inputFormatters: [maskFormatter],
                     decoration: const InputDecoration(
                       labelText: "Data de Nascimento",
-                      prefixIcon: Icon(
-                        Icons.calendar_month,
-                      ),
+                      prefixIcon: Icon(Icons.calendar_month),
                     ),
                     keyboardType: TextInputType.number,
                   ),
@@ -303,48 +313,45 @@ class _TelaVacaState extends State<TelaVaca> {
                     ),
                   if (!_ehTouro)
                     DropdownButtonFormField<String>(
-                    initialValue: _statusSelecionado ?? "Vazia",
-                    decoration: const InputDecoration(
-                      labelText: "Status",
-                      prefixIcon: Icon(Icons.info),
+                      value: _statusSelecionado ?? "Vazia",
+                      decoration: const InputDecoration(
+                        labelText: "Status",
+                        prefixIcon: Icon(Icons.info),
+                      ),
+                      items: const [
+                        DropdownMenuItem(
+                          value: "Vazia",
+                          child: Text("Vazia"),
+                        ),
+                        DropdownMenuItem(
+                          value: "Inseminar",
+                          child: Text("Inseminar"),
+                        ),
+                        DropdownMenuItem(
+                          value: "Inseminada",
+                          child: Text("Inseminada"),
+                        ),
+                        DropdownMenuItem(
+                          value: "Prenhe",
+                          child: Text("Prenhe"),
+                        ),
+                        DropdownMenuItem(
+                          value: "Seca",
+                          child: Text("Seca"),
+                        ),
+                      ],
+                      onChanged: (valor) {
+                        setModalState(() {
+                          _statusSelecionado = valor;
+                        });
+                      },
                     ),
-                    items: const [
-                      DropdownMenuItem(
-                        value: "Vazia",
-                        child: Text("Vazia"),
-                      ),
-                      DropdownMenuItem(
-                        value: "Inseminar",
-                        child: Text("Inseminar"),
-                      ),
-                      DropdownMenuItem(
-                        value: "Inseminada",
-                        child: Text("Inseminada"),
-                      ),
-                      DropdownMenuItem(
-                        value: "Prenhe",
-                        child: Text("Prenhe"),
-                      ),
-                      DropdownMenuItem(
-                        value: "Seca",
-                        child: Text("Seca"),
-                      ),
-                    ],
-                    onChanged: (valor) {
-                      setModalState(() {
-                        _statusSelecionado = valor;
-                      });
-                    },
-                  ),
                   const SizedBox(height: 25),
                   ElevatedButton(
                     onPressed: _adicionarVaca,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.green,
-                      minimumSize: const Size(
-                        double.infinity,
-                        50,
-                      ),
+                      minimumSize: const Size(double.infinity, 50),
                     ),
                     child: const Text(
                       "SALVAR ANIMAL",
@@ -362,39 +369,35 @@ class _TelaVacaState extends State<TelaVaca> {
       ),
     );
   }
+
   void _abrirDetalhes(String vacaId) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => TelaDetalheVaca(
-          vacaId: vacaId,
-        ),
+        builder: (context) => TelaDetalheVaca(vacaId: vacaId),
       ),
     );
   }
+
   @override
   Widget build(BuildContext context) {
     final usuarioId = _usuarioId;
+
     if (usuarioId == null) {
       return const Scaffold(
-        body: Center(
-          child: Text("Usuário não autenticado."),
-        ),
+        body: Center(child: Text("Usuário não autenticado.")),
       );
     }
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: const Text(
           "Animal",
-          style: TextStyle(
-            color: Colors.white,
-          ),
+          style: TextStyle(color: Colors.white),
         ),
         backgroundColor: Colors.green,
-        iconTheme: const IconThemeData(
-          color: Colors.white,
-        ),
+        iconTheme: const IconThemeData(color: Colors.white),
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(116),
           child: Padding(
@@ -425,7 +428,7 @@ class _TelaVacaState extends State<TelaVaca> {
                       child: DropdownButtonFormField<String>(
                         value: _filtroTipo,
                         decoration: InputDecoration(
-                          hintText: "Filtrar animais",
+                          labelText: "Filtrar animais",
                           isDense: true,
                           filled: true,
                           fillColor: Colors.white,
@@ -482,54 +485,51 @@ class _TelaVacaState extends State<TelaVaca> {
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('vacas')
-            .where(
-          'usuarioId',
-          isEqualTo: usuarioId,
-        )
+            .where('usuarioId', isEqualTo: usuarioId)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return const Center(
-              child: Text(
-                "Erro ao carregar dados.",
-              ),
+              child: Text("Erro ao carregar dados."),
             );
           }
-          if (snapshot.connectionState ==
-              ConnectionState.waiting) {
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(
-              child: CircularProgressIndicator(
-              color: Colors.green,
-              ),
+              child: CircularProgressIndicator(color: Colors.green),
             );
           }
+
           final documentos = snapshot.data!.docs.where((doc) {
             final dados = doc.data() as Map<String, dynamic>;
+
+            if (dados['baixado'] == true) return false;
+
             final nome = (dados['nome'] ?? "").toString().toLowerCase();
             final brinco = (dados['brinco'] ?? "").toString().toLowerCase();
-            // Registros antigos, sem tipoAnimal, continuam sendo tratados como vacas.
-            final tipo = (dados['tipoAnimal'] ?? 'vaca')
-                .toString()
-                .toLowerCase();
+            final tipo =
+                (dados['tipoAnimal'] ?? 'vaca').toString().toLowerCase();
+
             final correspondeBusca =
                 nome.contains(_busca) || brinco.contains(_busca);
             final correspondeTipo =
                 _filtroTipo == "todos" || tipo == _filtroTipo;
+
             return correspondeBusca && correspondeTipo;
           }).toList();
+
           if (documentos.isEmpty) {
             return const Center(
-              child: Text(
-                "Nenhum animal cadastrado para este usuário.",
-              ),
+              child: Text("Nenhum animal cadastrado para este usuário."),
             );
           }
+
           return ListView.builder(
             itemCount: documentos.length,
             itemBuilder: (context, index) {
               final doc = documentos[index];
-              final vaca =
-              doc.data() as Map<String, dynamic>;
+              final vaca = doc.data() as Map<String, dynamic>;
+
               return Card(
                 margin: const EdgeInsets.symmetric(
                   horizontal: 15,
@@ -537,18 +537,19 @@ class _TelaVacaState extends State<TelaVaca> {
                 ),
                 child: ListTile(
                   onTap: () => _abrirDetalhes(doc.id),
-                  leading: const CircleAvatar(
-                    backgroundColor: Colors.green,
-                    child: Icon(
-                      Icons.agriculture,
-                      color: Colors.white,
+                  leading: SizedBox(
+                    width: 40,
+                    height: 40,
+                    child: Image.asset(
+                      'assets/img/animal.png',
+                      width: 40,
+                      height: 40,
+                      fit: BoxFit.contain,
                     ),
                   ),
                   title: Text(
                     vaca['nome'] ?? 'Sem nome',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                   subtitle: Text(
                     (vaca['tipoAnimal'] ?? 'vaca').toString().toLowerCase() ==
@@ -557,20 +558,15 @@ class _TelaVacaState extends State<TelaVaca> {
                         : "Brinco: ${vaca['brinco'] ?? '--'} | "
                             "Parto: ${vaca['ultimoParto'] ?? '--'}",
                   ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        (vaca['tipoAnimal'] ?? 'vaca').toString().toLowerCase() ==
-                                'touro'
-                            ? "Touro"
-                            : (vaca['status'] ?? "").toString(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w500,
-                          color: Colors.green,
-                        ),
-                      ),
-                    ],
+                  trailing: Text(
+                    (vaca['tipoAnimal'] ?? 'vaca').toString().toLowerCase() ==
+                            'touro'
+                        ? "Touro"
+                        : (vaca['status'] ?? "").toString(),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                      color: Colors.green,
+                    ),
                   ),
                 ),
               );
@@ -581,18 +577,14 @@ class _TelaVacaState extends State<TelaVaca> {
       floatingActionButton: FloatingActionButton(
         onPressed: _abrirFormulario,
         backgroundColor: Colors.green,
-        child: const Icon(
-          Icons.add,
-          color: Colors.white,
-        ),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       bottomNavigationBar: BottomAppBar(
         color: Colors.green,
         child: SingleChildScrollView(
           scrollDirection: Axis.horizontal,
           child: Row(
-            mainAxisAlignment:
-            MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _botaoMenu(
                 context,

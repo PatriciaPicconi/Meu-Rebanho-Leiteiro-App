@@ -172,12 +172,13 @@ class _TelaLoginState extends State<TelaLogin> {
               key: _formKey,
               child: Column(
                 children: [
-                  const Icon(
-                    Icons.agriculture,
-                    size: 90,
-                    color: Colors.green,
-                  ),
-                  const SizedBox(height: 10),
+                  Image.asset(
+                  'assets/img/logo-landscape.png',
+                  width: 220,
+                  height: 90,
+                  fit: BoxFit.contain,
+                ),
+                const SizedBox(height: 10),
 
                   const Text(
                     "Acesso ao Sistema",

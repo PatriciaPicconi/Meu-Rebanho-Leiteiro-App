@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class FormularioBaixas extends StatefulWidget {
   const FormularioBaixas({super.key});
@@ -9,152 +11,291 @@ class FormularioBaixas extends StatefulWidget {
 
 class _FormularioBaixasState extends State<FormularioBaixas> {
   final _formKey = GlobalKey<FormState>();
-  final TextEditingController _nomeController = TextEditingController();
-  final TextEditingController _brincoController = TextEditingController();
-  final TextEditingController _idadeController = TextEditingController();
-  final TextEditingController _obsController = TextEditingController();
+  final _obsController = TextEditingController();
+
+  String? _animalSelecionado;
   String? _situacao = 'Vendida';
+  bool _salvando = false;
+
+  String? get _usuarioId => FirebaseAuth.instance.currentUser?.uid;
 
   @override
   void dispose() {
-    _nomeController.dispose();
-    _brincoController.dispose();
-    _idadeController.dispose();
     _obsController.dispose();
     super.dispose();
   }
 
+  Future<void> _salvarBaixa() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final usuarioId = _usuarioId;
+
+    if (usuarioId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Usuário não autenticado.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    if (_animalSelecionado == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Selecione um animal.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _salvando = true);
+
+    try {
+      final referencia = FirebaseFirestore.instance
+          .collection('vacas')
+          .doc(_animalSelecionado);
+
+      final documento = await referencia.get();
+
+      if (!documento.exists ||
+          documento.data()?['usuarioId'] != usuarioId) {
+        throw Exception('Animal não encontrado na sua conta.');
+      }
+
+      final dados = documento.data()!;
+
+      if (dados['baixado'] == true) {
+        throw Exception('Este animal já possui uma baixa registrada.');
+      }
+
+      await referencia.update({
+        'baixado': true,
+        'motivoBaixa': _situacao ?? 'Vendida',
+        'observacaoBaixa': _obsController.text.trim(),
+        'dataBaixa': FieldValue.serverTimestamp(),
+        'dataAtualizacao': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      // Fecha o formulário e devolve o resultado para a tela anterior.
+      // Não use o context deste formulário depois de fechá-lo.
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível registrar a baixa: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _salvando = false);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final usuarioId = _usuarioId;
+
+    if (usuarioId == null) {
+      return const Scaffold(
+        body: Center(
+          child: Text('Usuário não autenticado.'),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text(
-          "Meu Rebanho Leiteiro",
-          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          'Registrar Baixa',
+          style: TextStyle(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.brown,
         iconTheme: const IconThemeData(color: Colors.white),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.white, size: 30),
-            onPressed: () {},
-          ),
-        ],
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text(
-                "Registrar Baixa de Animal",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.brown),
-              ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _nomeController,
-                decoration: InputDecoration(
-                  labelText: 'Nome do animal',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.brown)),
-                ),
-                validator: (value) => value!.isEmpty ? 'Informe o nome' : null,
-              ),
-              const SizedBox(height: 15),
-              TextFormField(
-                controller: _brincoController,
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  labelText: 'Brinco (Número/ID)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.brown)),
-                ),
-                validator: (value) => value!.isEmpty ? 'Informe o número do brinco' : null,
-              ),
-              const SizedBox(height: 15),
-              TextFormField(
-                controller: _idadeController,
-                decoration: InputDecoration(
-                  labelText: 'Idade (Ex: 4 anos)',
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.brown)),
-                ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                "Motivo da Baixa:",
-                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.brown),
-              ),
-              Row(
+      body: StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(
+        stream: FirebaseFirestore.instance
+            .collection('vacas')
+            .where('usuarioId', isEqualTo: usuarioId)
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return const Center(
+              child: Text('Erro ao carregar os animais cadastrados.'),
+            );
+          }
+
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(
+              child: CircularProgressIndicator(color: Colors.brown),
+            );
+          }
+
+          final animais = snapshot.data?.docs.where((doc) {
+                return doc.data()['baixado'] != true;
+              }).toList() ??
+              [];
+
+          return SingleChildScrollView(
+            padding: const EdgeInsets.all(16),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Radio<String>(
-                    value: 'Vendida',
-                    groupValue: _situacao,
-                    activeColor: Colors.brown,
-                    onChanged: (value) {
+                  const Text(
+                    'Registrar Baixa de Animal',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.brown,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  DropdownButtonFormField<String>(
+                    value: _animalSelecionado,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Selecione o animal',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.brown),
+                      ),
+                    ),
+                    items: animais.map((doc) {
+                      final dados = doc.data();
+                      final nome = (dados['nome'] ?? 'Sem nome').toString();
+                      final brinco = (dados['brinco'] ?? '--').toString();
+
+                      return DropdownMenuItem<String>(
+                        value: doc.id,
+                        child: Text(
+                          '$nome | Brinco: $brinco',
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }).toList(),
+                    onChanged: (valor) {
                       setState(() {
-                        _situacao = value;
+                        _animalSelecionado = valor;
                       });
                     },
-                  ),
-                  const Text('Vendida', style: TextStyle(fontSize: 16)),
-                  const SizedBox(width: 30),
-                  Radio<String>(
-                    value: 'Morreu',
-                    groupValue: _situacao,
-                    activeColor: Colors.brown,
-                    onChanged: (value) {
-                      setState(() {
-                        _situacao = value;
-                      });
+                    validator: (valor) {
+                      if (valor == null || valor.isEmpty) {
+                        return 'Selecione um animal.';
+                      }
+                      return null;
                     },
                   ),
-                  const Text('Morreu', style: TextStyle(fontSize: 16)),
+
+                  if (animais.isEmpty)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 8),
+                      child: Text(
+                        'Não há animais ativos disponíveis para baixa.',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+
+                  const SizedBox(height: 24),
+
+                  const Text(
+                    'Motivo da Baixa:',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.brown,
+                    ),
+                  ),
+
+                  Row(
+                    children: [
+                      Radio<String>(
+                        value: 'Vendida',
+                        groupValue: _situacao,
+                        activeColor: Colors.brown,
+                        onChanged: (valor) {
+                          setState(() => _situacao = valor);
+                        },
+                      ),
+                      const Text('Vendida'),
+                      const SizedBox(width: 20),
+                      Radio<String>(
+                        value: 'Morreu',
+                        groupValue: _situacao,
+                        activeColor: Colors.brown,
+                        onChanged: (valor) {
+                          setState(() => _situacao = valor);
+                        },
+                      ),
+                      const Text('Morreu'),
+                    ],
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  TextFormField(
+                    controller: _obsController,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      labelText: 'Observações adicionais',
+                      alignLabelWithHint: true,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      focusedBorder: const OutlineInputBorder(
+                        borderSide: BorderSide(color: Colors.brown),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(height: 30),
+
+                  SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: ElevatedButton(
+                      onPressed: _salvando || animais.isEmpty
+                          ? null
+                          : _salvarBaixa,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.brown,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10),
+                        ),
+                      ),
+                      child: _salvando
+                          ? const CircularProgressIndicator(
+                              color: Colors.white,
+                            )
+                          : const Text(
+                              'SALVAR BAIXA',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                    ),
+                  ),
                 ],
               ),
-              const SizedBox(height: 15),
-              TextFormField(
-                controller: _obsController,
-                maxLines: 4,
-                decoration: InputDecoration(
-                  labelText: 'Observações Adicionais',
-                  alignLabelWithHint: true,
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-                  focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Colors.brown)),
-                ),
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.brown,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  ),
-                  onPressed: () {
-                    if (_formKey.currentState!.validate()) {
-                      Map<String, String> novaVaca = {
-                        'nome': _nomeController.text,
-                        'id': _brincoController.text,
-                        'motivo': _situacao ?? 'Vendida',
-                        'observacao': _obsController.text,
-                        'foto': 'https://via.placeholder.com/150',
-                      };
-                      Navigator.pop(context, novaVaca);
-                    }
-                  },
-                  child: const Text(
-                    "SALVAR",
-                    style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
+            ),
+          );
+        },
       ),
     );
   }

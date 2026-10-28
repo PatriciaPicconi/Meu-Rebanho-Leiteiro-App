@@ -14,64 +14,169 @@ class MenuPrincipal extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "MEU REBANHO LEITEIRO",
-          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white, fontSize: 18),
+        /*
+        title: Padding(
+          padding: const EdgeInsets.only(left: 16),
+          child: Image.asset(
+            'assets/img/logo-landscape-white.png',
+            height: 40,
+            fit: BoxFit.contain,
+          ),
         ),
-        backgroundColor: Colors.green,
-        centerTitle: true,
+        */
+        titleSpacing: 0,
+        centerTitle: false,
         automaticallyImplyLeading: false,
         actions: [
           IconButton(
-            icon: const Icon(Icons.account_circle, size: 30, color: Colors.white),
+            icon: const Icon(
+              Icons.account_circle,
+              size: 30,
+              color: Colors.white,
+            ),
             onPressed: () {
-              Navigator.push(context, MaterialPageRoute(builder: (context) => const TelaPerfil()));
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const TelaPerfil(),
+                ),
+              );
             },
           ),
         ],
+        backgroundColor: Colors.green,
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
-        child: GridView.count(
-          crossAxisCount: 2,
-          crossAxisSpacing: 20,
-          mainAxisSpacing: 20,
-          children: [
-            _itemMenu(context, "ANIMAL", Icons.agriculture, Colors.green, const TelaVaca()),
-            _itemMenu(context, "INSEMINAÇÃO", Icons.vaccines, Colors.blue, const TelaInseminar()),
-            _itemMenu(context, "EXAME DE TOQUE", Icons.front_hand, Colors.orange, const TelaToque()),
-            _itemMenu(context, "PRENHEZ", Icons.favorite, Colors.red, const TelaPrenhez()),
-            _itemMenu(context, "HISTÓRICO", Icons.history, Colors.purple, const TelaHistorico()),
-            _itemMenu(context, "BAIXAS", Icons.trending_down, Colors.brown, const TelaBaixas()),
-          ],
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              Image.asset(
+                'assets/img/logo-landscape.png',
+                height: 65,
+                fit: BoxFit.contain,
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'O que deseja fazer hoje?',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+              const SizedBox(height: 20),
+              GridView.count(
+                crossAxisCount: 2,
+                crossAxisSpacing: 20,
+                mainAxisSpacing: 20,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                children: [
+                  _itemMenu(
+                    context,
+                    "ANIMAL",
+                    null,
+                    Colors.green,
+                    const TelaVaca(),
+                  ),
+                  _itemMenu(
+                    context,
+                    "INSEMINAÇÃO",
+                    Icons.vaccines,
+                    Colors.blue,
+                    const TelaInseminar(),
+                  ),
+                  _itemMenu(
+                    context,
+                    "EXAME DE TOQUE",
+                    null,
+                    Colors.orange,
+                    const TelaToque(),
+                  ),
+                  _itemMenu(
+                    context,
+                    "PRENHEZ",
+                    Icons.favorite,
+                    Colors.red,
+                    const TelaPrenhez(),
+                  ),
+                  _itemMenu(
+                    context,
+                    "HISTÓRICO",
+                    Icons.history,
+                    Colors.purple,
+                    const TelaHistorico(),
+                  ),
+                  _itemMenu(
+                    context,
+                    "BAIXAS",
+                    Icons.trending_down,
+                    Colors.brown,
+                    const TelaBaixas(),
+                  ),
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget _itemMenu(BuildContext context, String titulo, IconData icone, Color cor, Widget tela) {
+  Widget _itemMenu(
+    BuildContext context,
+    String titulo,
+    IconData? icone,
+    Color cor,
+    Widget tela,
+  ) {
     return InkWell(
       onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (context) => tela));
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => tela),
+        );
       },
+      borderRadius: BorderRadius.circular(20),
       child: Container(
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: const [
-            BoxShadow(color: Colors.black12, blurRadius: 6, offset: Offset(0, 3))
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 6,
+              offset: Offset(0, 3),
+            ),
           ],
-          border: Border.all(color: cor.withValues(alpha: 0.5), width: 2),
+          border: Border.all(
+            color: cor.withValues(alpha: 0.5),
+            width: 2,
+          ),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icone, size: 50, color: cor),
+            icone != null
+            ? Icon(icone, size: 50, color: cor)
+            : Image.asset(
+                titulo == "ANIMAL"
+                    ? 'assets/img/animal.png'
+                    : 'assets/img/toque.png',
+                width: 50,
+                height: 50,
+                fit: BoxFit.contain,
+              ),
             const SizedBox(height: 10),
             Text(
               titulo,
               textAlign: TextAlign.center,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+              style: const TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 12,
+              ),
             ),
           ],
         ),

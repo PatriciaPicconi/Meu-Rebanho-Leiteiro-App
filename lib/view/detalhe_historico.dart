@@ -702,21 +702,13 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                     Center(
                       child: Column(
                         children: [
-                          CircleAvatar(
-                            radius: 60,
-                            backgroundImage:
-                                (dados['foto'] is String &&
-                                        (dados['foto'] as String).isNotEmpty)
-                                    ? NetworkImage(dados['foto'] as String)
-                                    : null,
-                            child: (dados['foto'] is String &&
-                                    (dados['foto'] as String).isNotEmpty)
-                                ? null
-                                : const Icon(
-                                    Icons.agriculture,
-                                    size: 54,
-                                    color: Colors.grey,
-                                  ),
+                          SizedBox(
+                            width: 80,
+                            height: 80,
+                            child: Image.asset(
+                              'assets/img/animal.png',
+                              fit: BoxFit.contain,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Text(

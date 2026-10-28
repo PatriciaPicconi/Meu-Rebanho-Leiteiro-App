@@ -320,12 +320,13 @@ class _TelaCadastroUsuarioState extends State<TelaCadastroUsuario> {
             key: _formKey,
             child: Column(
               children: [
-                const Icon(
-                  Icons.account_circle,
-                  size: 90,
-                  color: Colors.green,
+                  Image.asset(
+                  'assets/img/logo-landscape.png',
+                  width: 220,
+                  height: 90,
+                  fit: BoxFit.contain,
                 ),
-                const SizedBox(height: 8),
+                const SizedBox(height: 10),
                 const Text(
                   "Criar Perfil do Produtor",
                   style: TextStyle(

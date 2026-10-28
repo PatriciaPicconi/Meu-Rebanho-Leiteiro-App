@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import 'telavaca.dart';
 import 'telainseminar.dart';
 import 'telatoque.dart';
@@ -31,11 +30,12 @@ class _TelaHistoricoState extends State<TelaHistorico> {
 
   Widget _botaoMenu(
       BuildContext context,
-      IconData icone,
+      IconData? icone,
       String label,
       Color corIcone,
-      Widget tela,
-      ) {
+      Widget tela, {
+      bool usarImagem = false,
+    }) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(
         context,
@@ -44,11 +44,14 @@ class _TelaHistoricoState extends State<TelaHistorico> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icone,
-            color: corIcone,
-            size: 22,
-          ),
+          usarImagem
+          ? Image.asset(
+              'img/animal.png',
+              width: 22,
+              height: 22,
+              fit: BoxFit.contain,
+            )
+          : Icon(icone, color: corIcone, size: 22),
           const SizedBox(height: 4),
           Text(
             label,
@@ -203,11 +206,11 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                       ),
 
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundImage: NetworkImage(
-                            vacaDados['foto'] ??
-                                'https://via.placeholder.com/150',
-                          ),
+                        leading: Image.asset(
+                          'assets/img/animal.png',
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
                         ),
 
                         title: Text(
@@ -261,10 +264,11 @@ class _TelaHistoricoState extends State<TelaHistorico> {
             children: [
               _botaoMenu(
                 context,
-                Icons.agriculture,
-                "ANIMAL",
+                null,
+                'ANIMAL',
                 Colors.green,
                 const TelaVaca(),
+                usarImagem: true,
               ),
 
               _botaoMenu(
