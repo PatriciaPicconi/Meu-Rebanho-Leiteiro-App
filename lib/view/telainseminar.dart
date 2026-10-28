@@ -3,12 +3,40 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 import 'telavaca.dart';
-import 'telatoque.dart';
+import 'telatoque.dart' as toque;
 import 'telaprenhez.dart';
 import 'telaperfil.dart';
 import 'tela_historico.dart';
 import 'tela_baixas.dart';
-import '../services/google_calendar_service.dart';
+
+const Color azulInseminacao = Colors.lightBlue;
+const Color fundoInseminacao = Color(0xFFEAF3E8);
+const String imagemAnimal = 'assets/img/animal.png';
+const String imagemTouro = 'assets/img/touro.png';
+const String imagemToque = 'assets/img/toque.png';
+const String outroTouro = '__outro__';
+
+bool _estaBaixado(Map<String, dynamic> dados) {
+  final status = (dados['status'] ?? '')
+      .toString()
+      .trim()
+      .toLowerCase();
+
+  return dados['baixado'] == true ||
+      status == 'baixado' ||
+      status == 'baixada' ||
+      status == 'baixa' ||
+      status == 'baixado(a)';
+}
+
+bool _ehTouro(Map<String, dynamic> dados) {
+  final tipo = (dados['tipoAnimal'] ?? '')
+      .toString()
+      .trim()
+      .toLowerCase();
+
+  return tipo.contains('touro');
+}
 
 class TelaInseminar extends StatefulWidget {
   const TelaInseminar({super.key});
@@ -19,7 +47,7 @@ class TelaInseminar extends StatefulWidget {
 
 class _TelaInseminarState extends State<TelaInseminar> {
   final TextEditingController _buscaController =
-  TextEditingController();
+      TextEditingController();
 
   String _filtroBusca = '';
 
@@ -33,12 +61,13 @@ class _TelaInseminarState extends State<TelaInseminar> {
   }
 
   Widget _botaoMenu(
-      BuildContext context,
-      IconData icone,
-      String label,
-      Color corIcone,
-      Widget tela,
-      ) {
+    BuildContext context,
+    IconData? icone,
+    String label,
+    Color corIcone,
+    Widget tela, {
+    String? imagem,
+  }) {
     return TextButton(
       onPressed: () {
         Navigator.pushReplacement(
@@ -51,11 +80,19 @@ class _TelaInseminarState extends State<TelaInseminar> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            icone,
-            color: corIcone,
-            size: 22,
-          ),
+          if (imagem != null)
+            Image.asset(
+              imagem,
+              width: 22,
+              height: 22,
+              fit: BoxFit.contain,
+            )
+          else
+            Icon(
+              icone,
+              color: corIcone,
+              size: 22,
+            ),
           const SizedBox(height: 4),
           Text(
             label,
@@ -71,30 +108,23 @@ class _TelaInseminarState extends State<TelaInseminar> {
   }
 
   bool _animalCorrespondeBusca(
-      Map<String, dynamic> dados,
-      ) {
+    Map<String, dynamic> dados,
+  ) {
     if (_filtroBusca.trim().isEmpty) {
       return true;
     }
 
-    final busca =
-    _filtroBusca.trim().toLowerCase();
+    final busca = _filtroBusca.trim().toLowerCase();
+    final nome = (dados['nome'] ?? '').toString().toLowerCase();
+    final brinco = (dados['brinco'] ?? '').toString().toLowerCase();
 
-    final nome =
-        dados['nome']?.toString().toLowerCase() ?? '';
-
-    final brinco =
-        dados['brinco']?.toString().toLowerCase() ?? '';
-
-    return nome.contains(busca) ||
-        brinco.contains(busca);
+    return nome.contains(busca) || brinco.contains(busca);
   }
 
   Future<void> _abrirFormulario(
-      DocumentSnapshot vaca,
-      ) async {
-    final dados =
-    vaca.data() as Map<String, dynamic>;
+    DocumentSnapshot vaca,
+  ) async {
+    final dados = vaca.data() as Map<String, dynamic>;
 
     await Navigator.push(
       context,
@@ -114,19 +144,16 @@ class _TelaInseminarState extends State<TelaInseminar> {
     if (usuarioId == null) {
       return const Scaffold(
         body: Center(
-          child: Text(
-            'Nenhum usuário autenticado.',
-          ),
+          child: Text('Nenhum usuário autenticado.'),
         ),
       );
     }
 
     return Scaffold(
-      backgroundColor:
-      const Color(0xFFEAF3E8),
+      backgroundColor: fundoInseminacao,
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.lightBlue,
+        backgroundColor: azulInseminacao,
         foregroundColor: Colors.white,
         title: const Text(
           'Inseminar',
@@ -148,32 +175,26 @@ class _TelaInseminarState extends State<TelaInseminar> {
                 });
               },
               decoration: InputDecoration(
-                hintText:
-                'Buscar por nome ou brinco',
+                hintText: 'Buscar por nome ou brinco',
                 prefixIcon: const Icon(
                   Icons.search,
-                  color: Colors.lightBlue,
+                  color: azulInseminacao,
                 ),
-                suffixIcon:
-                _filtroBusca.isNotEmpty
+                suffixIcon: _filtroBusca.isNotEmpty
                     ? IconButton(
-                  icon: const Icon(
-                    Icons.clear,
-                  ),
-                  onPressed: () {
-                    _buscaController.clear();
-
-                    setState(() {
-                      _filtroBusca = '';
-                    });
-                  },
-                )
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _buscaController.clear();
+                          setState(() {
+                            _filtroBusca = '';
+                          });
+                        },
+                      )
                     : null,
                 filled: true,
                 fillColor: Colors.white,
                 border: OutlineInputBorder(
-                  borderRadius:
-                  BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide.none,
                 ),
               ),
@@ -184,44 +205,36 @@ class _TelaInseminarState extends State<TelaInseminar> {
               stream: FirebaseFirestore.instance
                   .collection('vacas')
                   .where(
-                'usuarioId',
-                isEqualTo: usuarioId,
-              )
+                    'usuarioId',
+                    isEqualTo: usuarioId,
+                  )
                   .snapshots(),
-              builder: (
-                  context,
-                  snapshot,
-                  ) {
+              builder: (context, snapshot) {
                 if (snapshot.hasError) {
                   return const Center(
-                    child: Text(
-                      'Erro ao carregar os animais.',
-                    ),
+                    child: Text('Erro ao carregar os animais.'),
                   );
                 }
 
                 if (snapshot.connectionState ==
                     ConnectionState.waiting) {
                   return const Center(
-                    child:
-                    CircularProgressIndicator(
-                      color: Colors.lightBlue,
+                    child: CircularProgressIndicator(
+                      color: azulInseminacao,
                     ),
                   );
                 }
 
-                final documentos =
-                    snapshot.data?.docs ?? [];
+                final documentos = snapshot.data?.docs ?? [];
 
-                final vacasFiltradas =
-                documentos.where((doc) {
+                final vacasFiltradas = documentos.where((doc) {
                   final dados =
-                  doc.data()
-                  as Map<String, dynamic>;
+                      doc.data() as Map<String, dynamic>;
 
-                  if (!_animalCorrespondeBusca(
-                    dados,
-                  )) {
+                  if (_estaBaixado(dados)) return false;
+                  if (_ehTouro(dados)) return false;
+
+                  if (!_animalCorrespondeBusca(dados)) {
                     return false;
                   }
 
@@ -233,7 +246,6 @@ class _TelaInseminarState extends State<TelaInseminar> {
                   return status == 'vazia' ||
                       status == 'seca' ||
                       status == 'inseminar';
-
                 }).toList();
 
                 if (vacasFiltradas.isEmpty) {
@@ -241,87 +253,55 @@ class _TelaInseminarState extends State<TelaInseminar> {
                     child: Padding(
                       padding: EdgeInsets.all(24),
                       child: Text(
-                        'Nenhuma animal disponível para inseminação.',
+                        'Nenhum animal disponível para inseminação.',
                         textAlign: TextAlign.center,
-                        style: TextStyle(
-                          fontSize: 16,
-                        ),
+                        style: TextStyle(fontSize: 16),
                       ),
                     ),
                   );
                 }
 
                 return ListView.builder(
-                  padding:
-                  const EdgeInsets.symmetric(
+                  padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                   ),
-                  itemCount:
-                  vacasFiltradas.length,
-                  itemBuilder:
-                      (context, index) {
-                    final vaca =
-                    vacasFiltradas[index];
-
+                  itemCount: vacasFiltradas.length,
+                  itemBuilder: (context, index) {
+                    final vaca = vacasFiltradas[index];
                     final dados =
-                    vaca.data()
-                    as Map<String, dynamic>;
+                        vaca.data() as Map<String, dynamic>;
 
                     final nome =
-                        dados['nome']
-                            ?.toString() ??
-                            'Sem nome';
-
+                        dados['nome']?.toString() ?? 'Sem nome';
                     final brinco =
-                        dados['brinco']
-                            ?.toString() ??
-                            'Sem brinco';
+                        dados['brinco']?.toString() ?? 'Sem brinco';
 
                     return Card(
-                      margin:
-                      const EdgeInsets.only(
-                        bottom: 12,
-                      ),
+                      margin: const EdgeInsets.only(bottom: 12),
                       child: ListTile(
-                        leading:
-                        const CircleAvatar(
-                          backgroundColor:
-                          Colors.lightBlue,
-                          child: Icon(
-                            Icons.agriculture,
-                            color: Colors.white,
-                          ),
+                        leading: Image.asset(
+                          imagemAnimal,
+                          width: 40,
+                          height: 40,
+                          fit: BoxFit.contain,
+                          color: azulInseminacao,
+                          colorBlendMode: BlendMode.srcIn,
                         ),
                         title: Text(
                           nome,
-                          style:
-                          const TextStyle(
-                            fontWeight:
-                            FontWeight.bold,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
                           ),
                         ),
-                        subtitle: Text(
-                          'Brinco: $brinco',
-                        ),
-                        trailing:
-                        ElevatedButton(
-                          style:
-                          ElevatedButton.styleFrom(
-                            backgroundColor:
-                            Colors.lightBlue,
+                        subtitle: Text('Brinco: $brinco'),
+                        trailing: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: azulInseminacao,
                           ),
-                          onPressed: () =>
-                              _abrirFormulario(
-                                vaca,
-                              ),
-                          child:
-                          const Text(
+                          onPressed: () => _abrirFormulario(vaca),
+                          child: const Text(
                             'Inseminar',
-                            style:
-                            TextStyle(
-                              color:
-                              Colors.white,
-                            ),
+                            style: TextStyle(color: Colors.white),
                           ),
                         ),
                       ),
@@ -333,29 +313,28 @@ class _TelaInseminarState extends State<TelaInseminar> {
           ),
         ],
       ),
-      bottomNavigationBar:
-      BottomAppBar(
-        color: Colors.lightBlue,
+      bottomNavigationBar: BottomAppBar(
+        color: azulInseminacao,
         child: SingleChildScrollView(
-          scrollDirection:
-          Axis.horizontal,
+          scrollDirection: Axis.horizontal,
           child: Row(
-            mainAxisAlignment:
-            MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
             children: [
               _botaoMenu(
                 context,
-                Icons.agriculture,
+                null,
                 'ANIMAL',
                 Colors.green,
                 const TelaVaca(),
+                imagem: imagemAnimal,
               ),
               _botaoMenu(
                 context,
-                Icons.front_hand,
+                null,
                 'TOQUE',
                 Colors.orange,
-                const TelaToque(),
+                const toque.TelaToque(),
+                imagem: imagemToque,
               ),
               _botaoMenu(
                 context,
@@ -381,7 +360,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
               _botaoMenu(
                 context,
                 Icons.trending_down,
-                "BAIXAS",
+                'BAIXAS',
                 Colors.brown,
                 const TelaBaixas(),
               ),
@@ -393,8 +372,7 @@ class _TelaInseminarState extends State<TelaInseminar> {
   }
 }
 
-class FormularioInseminar
-    extends StatefulWidget {
+class FormularioInseminar extends StatefulWidget {
   final String vacaId;
   final Map<String, dynamic> dadosVaca;
 
@@ -409,23 +387,18 @@ class FormularioInseminar
       _FormularioInseminarState();
 }
 
-class _FormularioInseminarState
-    extends State<FormularioInseminar> {
-  final _formKey =
-  GlobalKey<FormState>();
+class _FormularioInseminarState extends State<FormularioInseminar> {
+  final _formKey = GlobalKey<FormState>();
+  final _dataController = TextEditingController();
+  final _outroTouroController = TextEditingController();
 
-  final _dataController =
-  TextEditingController();
-
-  final _touroController =
-  TextEditingController();
-
+  String? _touroSelecionado;
   bool _salvando = false;
 
   @override
   void dispose() {
     _dataController.dispose();
-    _touroController.dispose();
+    _outroTouroController.dispose();
     super.dispose();
   }
 
@@ -435,12 +408,22 @@ class _FormularioInseminarState
       initialDate: DateTime.now(),
       firstDate: DateTime(2000),
       lastDate: DateTime(2100),
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: const ColorScheme.light(
+              primary: azulInseminacao,
+            ),
+          ),
+          child: child!,
+        );
+      },
     );
 
-    if (data != null) {
+    if (data != null && mounted) {
       setState(() {
         _dataController.text =
-        '${data.day.toString().padLeft(2, '0')}/'
+            '${data.day.toString().padLeft(2, '0')}/'
             '${data.month.toString().padLeft(2, '0')}/'
             '${data.year}';
       });
@@ -448,14 +431,16 @@ class _FormularioInseminarState
   }
 
   Future<void> _salvar() async {
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
-    final usuarioId =
-        FirebaseAuth.instance.currentUser?.uid;
+    final usuarioId = FirebaseAuth.instance.currentUser?.uid;
 
     if (usuarioId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Nenhum usuário autenticado.'),
+        ),
+      );
       return;
     }
 
@@ -464,16 +449,75 @@ class _FormularioInseminarState
     });
 
     try {
-      final dadosVaca = widget.dadosVaca;
+      final referenciaVaca = FirebaseFirestore.instance
+          .collection('vacas')
+          .doc(widget.vacaId);
+
+      final documentoAtual = await referenciaVaca.get();
+
+      if (!documentoAtual.exists) {
+        throw Exception('O animal não foi encontrado.');
+      }
+
+      final dadosAtuais =
+          documentoAtual.data() as Map<String, dynamic>;
+
+      if (dadosAtuais['usuarioId'] != usuarioId) {
+        throw Exception(
+          'Você não tem permissão para alterar este animal.',
+        );
+      }
+
+      if (_estaBaixado(dadosAtuais)) {
+        throw Exception(
+          'Este animal está registrado em baixas e não pode ser inseminado.',
+        );
+      }
 
       final nome =
-          dadosVaca['nome']?.toString() ??
-              'Vaca';
-
+          dadosAtuais['nome']?.toString() ?? 'Vaca';
       final brinco =
-          dadosVaca['brinco']?.toString() ??
-              '';
+          dadosAtuais['brinco']?.toString() ?? '';
 
+      String nomeTouro;
+
+      if (_touroSelecionado == outroTouro) {
+        nomeTouro = _outroTouroController.text.trim();
+      } else {
+        final documentoTouro = await FirebaseFirestore.instance
+            .collection('vacas')
+            .doc(_touroSelecionado)
+            .get();
+
+        if (!documentoTouro.exists) {
+          throw Exception(
+            'O touro selecionado não foi encontrado.',
+          );
+        }
+
+        final dadosTouro =
+            documentoTouro.data() as Map<String, dynamic>;
+
+        if (dadosTouro['usuarioId'] != usuarioId ||
+            !_ehTouro(dadosTouro) ||
+            _estaBaixado(dadosTouro)) {
+          throw Exception(
+            'O touro selecionado não está disponível.',
+          );
+        }
+
+        nomeTouro = dadosTouro['nome']?.toString() ?? 'Touro';
+        final brincoTouro =
+            dadosTouro['brinco']?.toString() ?? '';
+
+        if (brincoTouro.trim().isNotEmpty) {
+          nomeTouro = '$nomeTouro (Brinco: $brincoTouro)';
+        }
+      }
+
+      final dataInseminacao = _dataController.text.trim();
+
+      // Registra o evento de inseminação.
       await FirebaseFirestore.instance
           .collection('inseminacoes')
           .add({
@@ -481,48 +525,25 @@ class _FormularioInseminarState
         'vacaId': widget.vacaId,
         'nomeVaca': nome,
         'brinco': brinco,
-        'dataInseminacao':
-        _dataController.text.trim(),
-        'touro': _touroController.text.trim(),
-        'dataRegistro':
-        FieldValue.serverTimestamp(),
+        'dataInseminacao': dataInseminacao,
+        'touro': nomeTouro,
+        'dataRegistro': FieldValue.serverTimestamp(),
       });
 
-      await FirebaseFirestore.instance
-          .collection('vacas')
-          .doc(widget.vacaId)
-          .update({
-        'usuarioId': usuarioId,
-        'status': 'Inseminar',
-        'dataInseminacao':
-        _dataController.text.trim(),
-      });
-
-      try {
-      
-      await FirebaseFirestore.instance
-          .collection('vacas')
-          .doc(widget.vacaId)
-          .update({
-        'usuarioId': usuarioId,
+      // Mantém a data no documento do animal para a tela Toque.
+      await referenciaVaca.update({
         'status': 'Inseminada',
-        'dataInseminacao':
-            _dataController.text.trim(),
+        'dataInseminacao': dataInseminacao,
       });
-
-      } catch (_) {
-        // O cadastro continua mesmo se o Google Agenda não abrir.
-      }
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
             'Inseminação registrada com sucesso!',
           ),
-          backgroundColor: Colors.lightBlue,
+          backgroundColor: azulInseminacao,
         ),
       );
 
@@ -530,12 +551,9 @@ class _FormularioInseminarState
     } catch (e) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Erro ao registrar inseminação: $e',
-          ),
+          content: Text('Erro ao registrar inseminação: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -551,44 +569,46 @@ class _FormularioInseminarState
   @override
   Widget build(BuildContext context) {
     final nome =
-        widget.dadosVaca['nome']
-            ?.toString() ??
-            'Vaca';
-
+        widget.dadosVaca['nome']?.toString() ?? 'Vaca';
     final brinco =
-        widget.dadosVaca['brinco']
-            ?.toString() ??
-            '';
+        widget.dadosVaca['brinco']?.toString() ?? '';
+    final usuarioId = FirebaseAuth.instance.currentUser?.uid;
 
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.lightBlue,
+        backgroundColor: azulInseminacao,
         foregroundColor: Colors.white,
-        title: const Text(
-          'Registrar Inseminação',
-        ),
+        title: const Text('Registrar Inseminação'),
       ),
-      backgroundColor:
-      const Color(0xFFEAF3E8),
+      backgroundColor: fundoInseminacao,
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),
         child: Form(
           key: _formKey,
           child: Column(
             children: [
+              Image.asset(
+                imagemAnimal,
+                width: 40,
+                height: 40,
+                fit: BoxFit.contain,
+                color: azulInseminacao,
+                colorBlendMode: BlendMode.srcIn,
+              ),
+              const SizedBox(height: 8),
               Text(
                 nome,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
+                  color: azulInseminacao,
                 ),
               ),
               const SizedBox(height: 6),
               Text(
                 'Brinco: $brinco',
-                style: const TextStyle(
-                  fontSize: 16,
-                ),
+                style: const TextStyle(fontSize: 16),
               ),
               const SizedBox(height: 24),
               TextFormField(
@@ -600,11 +620,11 @@ class _FormularioInseminarState
                   hintText: 'DD/MM/AAAA',
                   prefixIcon: const Icon(
                     Icons.calendar_month,
-                    color: Colors.lightBlue,
+                    color: azulInseminacao,
                   ),
                   suffixIcon: const Icon(
                     Icons.arrow_drop_down,
-                    color: Colors.lightBlue,
+                    color: azulInseminacao,
                   ),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
@@ -618,67 +638,189 @@ class _FormularioInseminarState
                 },
               ),
               const SizedBox(height: 16),
-              TextFormField(
-                controller:
-                _touroController,
-                decoration:
-                InputDecoration(
-                  labelText:
-                  'Touro / Sêmen utilizado',
-                  prefixIcon: const Icon(
-                    Icons.pets,
-                    color: Colors.lightBlue,
-                  ),
-                  border:
-                  OutlineInputBorder(
-                    borderRadius:
-                    BorderRadius.circular(
-                      12,
+              StreamBuilder<QuerySnapshot>(
+                stream: usuarioId == null
+                    ? null
+                    : FirebaseFirestore.instance
+                        .collection('vacas')
+                        .where(
+                          'usuarioId',
+                          isEqualTo: usuarioId,
+                        )
+                        .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return const Text(
+                      'Não foi possível carregar os touros cadastrados.',
+                    );
+                  }
+
+                  if (snapshot.connectionState ==
+                      ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: CircularProgressIndicator(
+                        color: azulInseminacao,
+                      ),
+                    );
+                  }
+
+                  final documentos = snapshot.data?.docs ?? [];
+
+                  final touros = documentos.where((doc) {
+                    final dados =
+                        doc.data() as Map<String, dynamic>;
+
+                    return _ehTouro(dados) &&
+                        !_estaBaixado(dados);
+                  }).toList();
+
+                  final opcoes = <DropdownMenuItem<String>>[
+                    ...touros.map((doc) {
+                      final dados =
+                          doc.data() as Map<String, dynamic>;
+                      final nomeTouro =
+                          dados['nome']?.toString() ?? 'Touro';
+                      final brincoTouro =
+                          dados['brinco']?.toString() ?? '';
+
+                      final rotulo = brincoTouro.trim().isEmpty
+                          ? nomeTouro
+                          : '$nomeTouro (Brinco: $brincoTouro)';
+
+                      return DropdownMenuItem<String>(
+                        value: doc.id,
+                        child: Text(
+                          rotulo,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      );
+                    }),
+                    const DropdownMenuItem<String>(
+                      value: outroTouro,
+                      child: Text('Outro, digitar manualmente'),
                     ),
-                  ),
-                ),
+                  ];
+
+                  final selecaoValida =
+                      _touroSelecionado != null &&
+                      opcoes.any(
+                        (opcao) =>
+                            opcao.value == _touroSelecionado,
+                      );
+
+                  return Column(
+                    children: [
+                      DropdownButtonFormField<String>(
+                        value: selecaoValida
+                            ? _touroSelecionado
+                            : null,
+                        isExpanded: true,
+                        decoration: InputDecoration(
+                          labelText: 'Touro / sêmen utilizado *',
+                          prefixIcon: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Image.asset(
+                              imagemTouro,
+                              width: 22,
+                              height: 22,
+                              fit: BoxFit.contain,
+                              color: azulInseminacao,
+                              colorBlendMode: BlendMode.srcIn,
+                            ),
+                          ),
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        items: opcoes,
+                        onChanged: (valor) {
+                          setState(() {
+                            _touroSelecionado = valor;
+                            if (valor != outroTouro) {
+                              _outroTouroController.clear();
+                            }
+                          });
+                        },
+                        validator: (valor) {
+                          if (valor == null || valor.isEmpty) {
+                            return 'Selecione um touro ou escolha Outro.';
+                          }
+                          return null;
+                        },
+                      ),
+                      if (_touroSelecionado == outroTouro) ...[
+                        const SizedBox(height: 12),
+                        TextFormField(
+                          controller: _outroTouroController,
+                          textCapitalization:
+                              TextCapitalization.words,
+                          decoration: InputDecoration(
+                            labelText: 'Nome do touro ou sêmen *',
+                            hintText: 'Digite o nome ou identificação',
+                            prefixIcon: const Icon(
+                              Icons.edit,
+                              color: azulInseminacao,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                          ),
+                          validator: (valor) {
+                            if (_touroSelecionado == outroTouro &&
+                                (valor == null ||
+                                    valor.trim().isEmpty)) {
+                              return 'Digite o nome ou a identificação.';
+                            }
+                            return null;
+                          },
+                        ),
+                      ],
+                      if (touros.isEmpty)
+                        const Padding(
+                          padding: EdgeInsets.only(top: 8),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Nenhum touro ativo cadastrado. Você pode escolher Outro.',
+                              style: TextStyle(fontSize: 12),
+                            ),
+                          ),
+                        ),
+                    ],
+                  );
+                },
               ),
               const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton.icon(
-                  style:
-                  ElevatedButton.styleFrom(
-                    backgroundColor:
-                    Colors.lightBlue,
-                    shape:
-                    RoundedRectangleBorder(
-                      borderRadius:
-                      BorderRadius.circular(
-                        12,
-                      ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: azulInseminacao,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
                     ),
                   ),
-                  onPressed:
-                  _salvando
-                      ? null
-                      : _salvar,
+                  onPressed: _salvando ? null : _salvar,
                   icon: _salvando
                       ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child:
-                    CircularProgressIndicator(
-                      color: Colors.white,
-                      strokeWidth: 2,
-                    ),
-                  )
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 2,
+                          ),
+                        )
                       : const Icon(
-                    Icons.save,
-                    color: Colors.white,
-                  ),
+                          Icons.save,
+                          color: Colors.white,
+                        ),
                   label: const Text(
                     'SALVAR INSEMINAÇÃO',
                     style: TextStyle(
                       color: Colors.white,
-                      fontWeight:
-                      FontWeight.bold,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),

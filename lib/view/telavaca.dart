@@ -10,6 +10,9 @@ import 'tela_historico.dart';
 import 'tela_baixas.dart';
 import 'tela_detalhe_vaca.dart';
 
+const String imagemVaca = 'assets/img/animal.png';
+const String imagemTouro = 'assets/img/touro.png';
+
 class TelaVaca extends StatefulWidget {
   const TelaVaca({super.key});
 
@@ -51,11 +54,12 @@ class _TelaVacaState extends State<TelaVaca> {
 
   Widget _botaoMenu(
     BuildContext context,
-    IconData icone,
+    IconData? icone,
     String label,
     Color corIcone,
-    Widget tela,
-  ) {
+    Widget tela, {
+    String? imagem,
+  }) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(
         context,
@@ -64,7 +68,14 @@ class _TelaVacaState extends State<TelaVaca> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icone, color: corIcone, size: 22),
+          imagem != null
+              ? Image.asset(
+                  imagem,
+                  width: 22,
+                  height: 22,
+                  fit: BoxFit.contain,
+                )
+              : Icon(icone, color: corIcone, size: 22),
           const SizedBox(height: 4),
           Text(
             label,
@@ -203,33 +214,29 @@ class _TelaVacaState extends State<TelaVaca> {
   void _confirmarExclusao(String id) {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Excluir animal"),
-          content: const Text(
-            "Deseja realmente excluir este animal? Esta ação não poderá ser desfeita.",
+      builder: (context) => AlertDialog(
+        title: const Text("Excluir animal"),
+        content: const Text(
+          "Deseja realmente excluir este animal? Esta ação não poderá ser desfeita.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar"),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar"),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(context);
+              _excluirVaca(id);
+            },
+            child: const Text(
+              "Excluir",
+              style: TextStyle(color: Colors.white),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                _excluirVaca(id);
-              },
-              child: const Text(
-                "Excluir",
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
@@ -392,10 +399,7 @@ class _TelaVacaState extends State<TelaVaca> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text(
-          "Animal",
-          style: TextStyle(color: Colors.white),
-        ),
+        title: const Text("Animal", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: PreferredSize(
@@ -407,9 +411,7 @@ class _TelaVacaState extends State<TelaVaca> {
                 TextField(
                   controller: _buscaController,
                   onChanged: (value) {
-                    setState(() {
-                      _busca = value.toLowerCase().trim();
-                    });
+                    setState(() => _busca = value.toLowerCase().trim());
                   },
                   decoration: InputDecoration(
                     hintText: "Pesquisar por nome ou brinco...",
@@ -455,9 +457,7 @@ class _TelaVacaState extends State<TelaVaca> {
                           ),
                         ],
                         onChanged: (valor) {
-                          setState(() {
-                            _filtroTipo = valor ?? "todos";
-                          });
+                          setState(() => _filtroTipo = valor ?? "todos");
                         },
                       ),
                     ),
@@ -489,9 +489,7 @@ class _TelaVacaState extends State<TelaVaca> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return const Center(
-              child: Text("Erro ao carregar dados."),
-            );
+            return const Center(child: Text("Erro ao carregar dados."));
           }
 
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -502,7 +500,6 @@ class _TelaVacaState extends State<TelaVaca> {
 
           final documentos = snapshot.data!.docs.where((doc) {
             final dados = doc.data() as Map<String, dynamic>;
-
             if (dados['baixado'] == true) return false;
 
             final nome = (dados['nome'] ?? "").toString().toLowerCase();
@@ -541,9 +538,12 @@ class _TelaVacaState extends State<TelaVaca> {
                     width: 40,
                     height: 40,
                     child: Image.asset(
-                      'assets/img/animal.png',
-                      width: 40,
-                      height: 40,
+                      (vaca['tipoAnimal'] ?? 'vaca')
+                                  .toString()
+                                  .toLowerCase() ==
+                              'touro'
+                          ? imagemTouro
+                          : imagemVaca,
                       fit: BoxFit.contain,
                     ),
                   ),
@@ -595,10 +595,11 @@ class _TelaVacaState extends State<TelaVaca> {
               ),
               _botaoMenu(
                 context,
-                Icons.front_hand,
+                null,
                 "TOQUE",
                 Colors.orange,
                 const TelaToque(),
+                imagem: 'assets/img/toque.png',
               ),
               _botaoMenu(
                 context,
@@ -611,7 +612,7 @@ class _TelaVacaState extends State<TelaVaca> {
                 context,
                 Icons.history,
                 "HISTÓRICO",
-                Colors.white,
+                Colors.purple,
                 const TelaHistorico(),
               ),
               _botaoMenu(

@@ -595,7 +595,182 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
     );
   }
 
-    @override
+    Widget _graficoPartos(
+    List<QueryDocumentSnapshot<Map<String, dynamic>>> animais,
+  ) {
+    int inteiro(dynamic valor) {
+      if (valor is num) return valor.toInt();
+      return int.tryParse((valor ?? '0').toString()) ?? 0;
+    }
+
+    final dados = animais.map((doc) {
+      final registro = doc.data();
+      final sucessos = inteiro(registro['partos_sucesso']);
+      final falhos = inteiro(registro['partos_falhos']);
+      final prenhezesSalvas = inteiro(registro['quantidade_prenhez']);
+
+      return <String, dynamic>{
+        'id': doc.id,
+        'nome': (registro['nome'] ?? 'Sem nome').toString(),
+        'brinco': (registro['brinco'] ?? '--').toString(),
+        'prenhezes': prenhezesSalvas > 0
+            ? prenhezesSalvas
+            : sucessos + falhos,
+        'sucessos': sucessos,
+        'falhos': falhos,
+      };
+    }).toList()
+      ..sort((a, b) {
+        final totalA = (a['sucessos'] as int) + (a['falhos'] as int);
+        final totalB = (b['sucessos'] as int) + (b['falhos'] as int);
+        return totalB.compareTo(totalA);
+      });
+
+    if (dados.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text('Ainda não há animais cadastrados para comparar.'),
+      );
+    }
+
+    final maior = dados.fold<int>(0, (maiorAtual, item) {
+      final sucessos = item['sucessos'] as int;
+      final falhos = item['falhos'] as int;
+      final maximo = sucessos > falhos ? sucessos : falhos;
+      return maximo > maiorAtual ? maximo : maiorAtual;
+    });
+    final maxY = maior == 0 ? 1.0 : (maior + 1).toDouble();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Partos por animal: sucesso x falha',
+          style: TextStyle(color: Colors.grey.shade700, fontSize: 13),
+        ),
+        const SizedBox(height: 8),
+        const Wrap(
+          spacing: 16,
+          runSpacing: 6,
+          children: [
+            _LegendaParto(cor: Colors.green, texto: 'Sucesso'),
+            _LegendaParto(cor: Colors.red, texto: 'Falho'),
+          ],
+        ),
+        const SizedBox(height: 12),
+        SizedBox(
+          height: (dados.length * 58.0).clamp(200.0, 440.0),
+          child: BarChart(
+            BarChartData(
+              maxY: maxY,
+              minY: 0,
+              alignment: BarChartAlignment.spaceAround,
+              groupsSpace: 12,
+              gridData: FlGridData(show: true, drawVerticalLine: false),
+              borderData: FlBorderData(show: false),
+              titlesData: FlTitlesData(
+                topTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                rightTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                bottomTitles: const AxisTitles(
+                  sideTitles: SideTitles(showTitles: false),
+                ),
+                leftTitles: AxisTitles(
+                  sideTitles: SideTitles(
+                    showTitles: true,
+                    reservedSize: 32,
+                    getTitlesWidget: (value, meta) => Text(
+                      value.toInt().toString(),
+                      style: const TextStyle(fontSize: 10),
+                    ),
+                  ),
+                ),
+              ),
+              barGroups: List.generate(dados.length, (index) {
+                final item = dados[index];
+                return BarChartGroupData(
+                  x: index,
+                  barsSpace: 4,
+                  barRods: [
+                    BarChartRodData(
+                      toY: (item['sucessos'] as int).toDouble(),
+                      color: Colors.green,
+                      width: 10,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(3),
+                      ),
+                    ),
+                    BarChartRodData(
+                      toY: (item['falhos'] as int).toDouble(),
+                      color: Colors.red,
+                      width: 10,
+                      borderRadius: const BorderRadius.vertical(
+                        top: Radius.circular(3),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+              barTouchData: BarTouchData(
+                enabled: true,
+                touchTooltipData: BarTouchTooltipData(
+                  getTooltipItem: (group, groupIndex, rod, rodIndex) {
+                    final item = dados[group.x];
+                    final tipo = rodIndex == 0 ? 'Sucesso' : 'Falho';
+                    return BarTooltipItem(
+                      '${item['nome']}\n$tipo: ${rod.toY.toInt()}',
+                      const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        ...dados.map((item) {
+          final atual = item['id'] == widget.vacaId;
+          return Container(
+            margin: const EdgeInsets.symmetric(vertical: 4),
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: atual ? Colors.purple.withOpacity(0.08) : null,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: atual ? Colors.purple : Colors.grey.shade300,
+              ),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '${item['nome']} (brinco ${item['brinco']})'
+                  '${atual ? ' • animal em destaque' : ''}',
+                  style: TextStyle(
+                    fontWeight: atual ? FontWeight.bold : FontWeight.normal,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Prenhezes registradas: ${item['prenhezes']}  |  '
+                  'Partos com sucesso: ${item['sucessos']}  |  '
+                  'Partos falhos: ${item['falhos']}',
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     final usuarioId = _usuarioId;
 
@@ -708,6 +883,7 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                             child: Image.asset(
                               'assets/img/animal.png',
                               fit: BoxFit.contain,
+                              color: Colors.purple,
                             ),
                           ),
                           const SizedBox(height: 12),
@@ -1030,6 +1206,17 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                     ),
                     const SizedBox(height: 12),
                     _graficoProducao(todosAnimais),
+                    const SizedBox(height: 28),
+                    const Text(
+                      'Histórico de Prenhezes e Partos:',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.purple,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _graficoPartos(todosAnimais),
                   ],
                 ),
               );
@@ -1037,6 +1224,32 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
           );
         },
       ),
+    );
+  }
+}
+
+class _LegendaParto extends StatelessWidget {
+  final Color cor;
+  final String texto;
+
+  const _LegendaParto({required this.cor, required this.texto});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 12,
+          height: 12,
+          decoration: BoxDecoration(
+            color: cor,
+            borderRadius: BorderRadius.circular(3),
+          ),
+        ),
+        const SizedBox(width: 6),
+        Text(texto),
+      ],
     );
   }
 }

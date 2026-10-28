@@ -211,6 +211,7 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                           width: 40,
                           height: 40,
                           fit: BoxFit.contain,
+                          color: Colors.purple,
                         ),
 
                         title: Text(

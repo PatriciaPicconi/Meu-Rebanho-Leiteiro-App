@@ -6,10 +6,7 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 class TelaDetalheVaca extends StatefulWidget {
   final String vacaId;
 
-  const TelaDetalheVaca({
-    super.key,
-    required this.vacaId,
-  });
+  const TelaDetalheVaca({super.key, required this.vacaId});
 
   @override
   State<TelaDetalheVaca> createState() => _TelaDetalheVacaState();
@@ -17,7 +14,6 @@ class TelaDetalheVaca extends StatefulWidget {
 
 class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
   final _formKey = GlobalKey<FormState>();
-
   final _nomeController = TextEditingController();
   final _brincoController = TextEditingController();
   final _racaController = TextEditingController();
@@ -26,11 +22,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
 
   bool _modoEdicao = false;
   bool _carregando = false;
-
   String _statusSelecionado = "Vazia";
-
-  // Identifica se o registro pertence a uma vaca ou a um touro.
-  // Registros antigos sem esse campo serão tratados como vacas.
   String _tipoAnimal = "vaca";
 
   final maskFormatter = MaskTextInputFormatter(
@@ -56,26 +48,20 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
     _dataNascimentoController.text =
         (dados['dataNascimento'] ?? '').toString();
     _ultimoPartoController.text = (dados['ultimoParto'] ?? '').toString();
-
     _statusSelecionado = (dados['status'] ?? 'Vazia').toString();
-
-    _tipoAnimal =
-        (dados['tipoAnimal'] ?? 'vaca').toString().toLowerCase();
+    _tipoAnimal = (dados['tipoAnimal'] ?? 'vaca').toString().toLowerCase();
   }
 
   Future<void> _salvarAlteracoes() async {
     if (!_formKey.currentState!.validate()) return;
 
     final usuario = FirebaseAuth.instance.currentUser;
-
     if (usuario == null) {
       _mostrarMensagem("Usuário não autenticado.", Colors.red);
       return;
     }
 
-    setState(() {
-      _carregando = true;
-    });
+    setState(() => _carregando = true);
 
     try {
       await FirebaseFirestore.instance
@@ -96,23 +82,12 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
       });
 
       if (!mounted) return;
-
-      setState(() {
-        _modoEdicao = false;
-      });
-
-      _mostrarMensagem(
-        "Informações atualizadas com sucesso.",
-        Colors.green,
-      );
+      setState(() => _modoEdicao = false);
+      _mostrarMensagem("Informações atualizadas com sucesso.", Colors.green);
     } catch (e) {
       _mostrarMensagem("Erro ao atualizar: $e", Colors.red);
     } finally {
-      if (mounted) {
-        setState(() {
-          _carregando = false;
-        });
-      }
+      if (mounted) setState(() => _carregando = false);
     }
   }
 
@@ -124,9 +99,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
           .delete();
 
       if (!mounted) return;
-
       Navigator.pop(context);
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Animal excluído com sucesso."),
@@ -141,45 +114,38 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
   void _confirmarExclusao() {
     showDialog(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text("Excluir animal"),
-          content: const Text(
-            "Deseja realmente excluir este animal? Este botão foi "
-            "criado para o caso de um registro em duplicidade. "
-            "Ao confirmar a exclusão, esse animal não aparecerá "
-            "em baixas. Esta ação não poderá ser desfeita.",
+      builder: (context) => AlertDialog(
+        title: const Text("Excluir animal"),
+        content: const Text(
+          "Deseja realmente excluir este animal? Este botão foi "
+          "criado para o caso de um registro em duplicidade. "
+          "Ao confirmar a exclusão, esse animal não aparecerá "
+          "em baixas. Esta ação não poderá ser desfeita.",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Cancelar"),
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text("Cancelar"),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              Navigator.pop(context);
+              _excluirVaca();
+            },
+            child: const Text(
+              "Excluir",
+              style: TextStyle(color: Colors.white),
             ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-              ),
-              onPressed: () {
-                Navigator.pop(context);
-                _excluirVaca();
-              },
-              child: const Text(
-                "Excluir",
-                style: TextStyle(color: Colors.white),
-              ),
-            ),
-          ],
-        );
-      },
+          ),
+        ],
+      ),
     );
   }
 
   void _mostrarMensagem(String mensagem, Color cor) {
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(mensagem),
-        backgroundColor: cor,
-      ),
+      SnackBar(content: Text(mensagem), backgroundColor: cor),
     );
   }
 
@@ -202,8 +168,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
           labelText: label,
           prefixIcon: Icon(icone, color: Colors.green),
           filled: !_modoEdicao,
-          fillColor:
-              _modoEdicao ? Colors.white : Colors.grey.shade100,
+          fillColor: _modoEdicao ? Colors.white : Colors.grey.shade100,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -213,29 +178,20 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(
-              color: Colors.green,
-              width: 2,
-            ),
+            borderSide: const BorderSide(color: Colors.green, width: 2),
           ),
         ),
         validator: (valor) {
-          if (obrigatorio &&
-              (valor == null || valor.trim().isEmpty)) {
+          if (obrigatorio && (valor == null || valor.trim().isEmpty)) {
             return "Campo obrigatório";
           }
-
           return null;
         },
       ),
     );
   }
 
-  Widget _linhaInformacao(
-    String titulo,
-    String valor,
-    IconData icone,
-  ) {
+  Widget _linhaInformacao(String titulo, String valor, IconData icone) {
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(14),
@@ -273,19 +229,19 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
 
   Widget _cabecalho(Map<String, dynamic> dados) {
     final ehTouro =
-        (dados['tipoAnimal'] ?? 'vaca').toString().toLowerCase() ==
-            'touro';
+        (dados['tipoAnimal'] ?? 'vaca').toString().toLowerCase() == 'touro';
 
     return Column(
       children: [
         const SizedBox(height: 10),
-        CircleAvatar(
-          radius: 62,
-          backgroundColor: Colors.green.shade100,
-          child: const Icon(
-            Icons.agriculture,
-            size: 80,
-            color: Colors.green,
+        SizedBox(
+          width: 100,
+          height: 100,
+          child: Image.asset(
+            (dados['tipoAnimal'] ?? 'vaca').toString().toLowerCase() == 'touro'
+                ? 'assets/img/touro.png'
+                : 'assets/img/animal.png',
+            fit: BoxFit.contain,
           ),
         ),
         const SizedBox(height: 10),
@@ -332,26 +288,17 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
 
   Widget _visualizacao(Map<String, dynamic> dados) {
     final ehTouro =
-        (dados['tipoAnimal'] ?? 'vaca').toString().toLowerCase() ==
-            'touro';
+        (dados['tipoAnimal'] ?? 'vaca').toString().toLowerCase() == 'touro';
 
     return Column(
       children: [
-        _linhaInformacao(
-          "Nome",
-          (dados['nome'] ?? '').toString(),
-          Icons.badge,
-        ),
+        _linhaInformacao("Nome", (dados['nome'] ?? '').toString(), Icons.badge),
         _linhaInformacao(
           "Brinco",
           (dados['brinco'] ?? '').toString(),
           Icons.confirmation_number,
         ),
-        _linhaInformacao(
-          "Raça",
-          (dados['raca'] ?? '').toString(),
-          Icons.pets,
-        ),
+        _linhaInformacao("Raça", (dados['raca'] ?? '').toString(), Icons.pets),
         _linhaInformacao(
           "Data de nascimento",
           (dados['dataNascimento'] ?? '').toString(),
@@ -431,19 +378,13 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
                 value: _statusSelecionado,
                 decoration: InputDecoration(
                   labelText: "Status",
-                  prefixIcon: const Icon(
-                    Icons.info,
-                    color: Colors.green,
-                  ),
+                  prefixIcon: const Icon(Icons.info, color: Colors.green),
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
                 items: const [
-                  DropdownMenuItem(
-                    value: "Vazia",
-                    child: Text("Vazia"),
-                  ),
+                  DropdownMenuItem(value: "Vazia", child: Text("Vazia")),
                   DropdownMenuItem(
                     value: "Inseminar",
                     child: Text("Inseminar"),
@@ -452,21 +393,13 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
                     value: "Inseminada",
                     child: Text("Inseminada"),
                   ),
-                  DropdownMenuItem(
-                    value: "Prenhe",
-                    child: Text("Prenhe"),
-                  ),
-                  DropdownMenuItem(
-                    value: "Seca",
-                    child: Text("Seca"),
-                  ),
+                  DropdownMenuItem(value: "Prenhe", child: Text("Prenhe")),
+                  DropdownMenuItem(value: "Seca", child: Text("Seca")),
                 ],
                 onChanged: _modoEdicao
                     ? (valor) {
                         if (valor != null) {
-                          setState(() {
-                            _statusSelecionado = valor;
-                          });
+                          setState(() => _statusSelecionado = valor);
                         }
                       }
                     : null,
@@ -543,9 +476,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
 
     if (usuario == null) {
       return const Scaffold(
-        body: Center(
-          child: Text("Usuário não autenticado."),
-        ),
+        body: Center(child: Text("Usuário não autenticado.")),
       );
     }
 
@@ -567,11 +498,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
               _modoEdicao ? Icons.close : Icons.edit,
               color: Colors.white,
             ),
-            onPressed: () {
-              setState(() {
-                _modoEdicao = !_modoEdicao;
-              });
-            },
+            onPressed: () => setState(() => _modoEdicao = !_modoEdicao),
           ),
         ],
       ),
@@ -594,13 +521,10 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
           }
 
           if (!snapshot.hasData || !snapshot.data!.exists) {
-            return const Center(
-              child: Text("Animal não encontrado."),
-            );
+            return const Center(child: Text("Animal não encontrado."));
           }
 
-          final dados =
-              snapshot.data!.data() as Map<String, dynamic>;
+          final dados = snapshot.data!.data() as Map<String, dynamic>;
 
           if (dados['usuarioId'] != usuario.uid) {
             return const Center(
@@ -610,9 +534,7 @@ class _TelaDetalheVacaState extends State<TelaDetalheVaca> {
             );
           }
 
-          if (!_modoEdicao) {
-            _preencherCampos(dados);
-          }
+          if (!_modoEdicao) _preencherCampos(dados);
 
           return SingleChildScrollView(
             padding: const EdgeInsets.all(18),
