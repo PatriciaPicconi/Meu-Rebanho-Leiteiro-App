@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'telavaca.dart';
 import 'telainseminar.dart';
 import 'telatoque.dart';
-import 'telaperfil.dart';
+import 'menuprincipal.dart';
 import 'tela_historico.dart';
 import 'tela_baixas.dart';
 
@@ -208,10 +208,32 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text(
-          'Prenhez',
-          style: TextStyle(color: Colors.white),
+        title: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Image.asset(
+                  'assets/img/logo-landscape-white.png',
+                  height: 35,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            const Center(
+              child: Text(
+                'Prenhez',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
+        centerTitle: true,
         backgroundColor: Colors.red,
         iconTheme: const IconThemeData(color: Colors.white),
         bottom: PreferredSize(
@@ -375,17 +397,17 @@ class _TelaPrenhezState extends State<TelaPrenhez> {
               ),
               _botaoMenu(
                 context,
-                Icons.person,
-                'PERFIL',
-                Colors.deepOrangeAccent,
-                const TelaPerfil(),
-              ),
-              _botaoMenu(
-                context,
                 Icons.trending_down,
                 'BAIXAS',
                 Colors.brown,
                 const TelaBaixas(),
+              ),
+              _botaoMenu(
+                context,
+                Icons.home,
+                'HOME',
+                Colors.white,
+                const MenuPrincipal(),
               ),
             ],
           ),

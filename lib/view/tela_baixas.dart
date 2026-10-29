@@ -6,7 +6,7 @@ import 'telavaca.dart';
 import 'telainseminar.dart';
 import 'telatoque.dart';
 import 'telaprenhez.dart';
-import 'telaperfil.dart';
+import 'menuprincipal.dart';
 import 'tela_historico.dart';
 import 'formulario_baixas.dart';
 import 'inf_baixas.dart';
@@ -37,6 +37,7 @@ class _TelaBaixasState extends State<TelaBaixas> {
     Color corIcone,
     Widget tela, {
     bool usarImagem = false,
+    String? caminhoImagem,
   }) {
     return TextButton(
       onPressed: () => Navigator.pushReplacement(
@@ -46,14 +47,15 @@ class _TelaBaixasState extends State<TelaBaixas> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          usarImagem
-        ? Image.asset(
-            'assets/img/animal.png',
-            width: 22,
-            height: 22,
-            fit: BoxFit.contain,
-          )
-          : Icon(icone, color: corIcone, size: 22),
+          (usarImagem || caminhoImagem != null)
+              ? Image.asset(
+                  caminhoImagem ?? 'assets/img/animal.png',
+                  width: 22,
+                  height: 22,
+                  fit: BoxFit.contain,
+                  color: corIcone,
+                )
+              : Icon(icone, color: corIcone, size: 22),
           const SizedBox(height: 4),
           Text(
             label,
@@ -80,16 +82,35 @@ class _TelaBaixasState extends State<TelaBaixas> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          'Baixas',
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
+      automaticallyImplyLeading: false,
+      backgroundColor: Colors.brown,
+      foregroundColor: Colors.white,
+      title: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Image.asset(
+                'assets/img/logo-landscape-white.png',
+                height: 35,
+                fit: BoxFit.contain,
+              ),
+            ),
           ),
-        ),
-        backgroundColor: Colors.brown,
-        automaticallyImplyLeading: false,
+          const Center(
+            child: Text(
+              'Baixas',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
+      centerTitle: true,
+    ),
 
       floatingActionButton: FloatingActionButton(
         backgroundColor: Colors.brown,
@@ -189,6 +210,7 @@ class _TelaBaixasState extends State<TelaBaixas> {
                       'observacao':
                           (dados['observacaoBaixa'] ?? '').toString(),
                       'foto': (dados['foto'] ?? '').toString(),
+                      'tipoAnimal': (dados['tipoAnimal'] ?? dados['tipo'] ?? '').toString(),
                       'vacaId': doc.id,
                     };
 
@@ -202,18 +224,17 @@ class _TelaBaixasState extends State<TelaBaixas> {
                         borderRadius: BorderRadius.circular(10),
                       ),
                       child: ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.brown.shade100,
-                          backgroundImage:
-                              vaca['foto']!.isNotEmpty
-                                  ? NetworkImage(vaca['foto']!)
-                                  : null,
-                          child: vaca['foto']!.isEmpty
-                              ? const Icon(
-                                  Icons.agriculture,
-                                  color: Colors.brown,
-                                )
-                              : null,
+                        leading: Image.asset(
+                          (vaca['tipoAnimal']!.toLowerCase().contains('touro') ||
+                                  vaca['tipoAnimal']!.toLowerCase().contains('macho'))
+                              ? 'assets/img/touro.png'
+                              : 'assets/img/animal.png',
+                          width: 42,
+                          height: 42,
+                          fit: BoxFit.contain,
+                          color: Colors.brown,
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(Icons.pets, color: Colors.brown, size: 32),
                         ),
                         title: Text(
                           vaca['nome']!,
@@ -273,10 +294,11 @@ class _TelaBaixasState extends State<TelaBaixas> {
               ),
               _botaoMenu(
                 context,
-                Icons.front_hand,
+                null,
                 'TOQUE',
                 Colors.orange,
                 const TelaToque(),
+                caminhoImagem: 'assets/img/toque.png',
               ),
               _botaoMenu(
                 context,
@@ -294,10 +316,10 @@ class _TelaBaixasState extends State<TelaBaixas> {
               ),
               _botaoMenu(
                 context,
-                Icons.person,
-                'PERFIL',
-                Colors.deepOrangeAccent,
-                const TelaPerfil(),
+                Icons.home,
+                'HOME',
+                Colors.white,
+                const MenuPrincipal(),
               ),
             ],
           ),

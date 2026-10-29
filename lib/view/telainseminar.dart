@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/google_calendar_service.dart';
 
 import 'telavaca.dart';
 import 'telatoque.dart' as toque;
 import 'telaprenhez.dart';
-import 'telaperfil.dart';
+import 'menuprincipal.dart';
 import 'tela_historico.dart';
 import 'tela_baixas.dart';
 
@@ -149,20 +150,38 @@ class _TelaInseminarState extends State<TelaInseminar> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: fundoInseminacao,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: azulInseminacao,
-        foregroundColor: Colors.white,
-        title: const Text(
-          'Inseminar',
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
+  return Scaffold(
+    backgroundColor: fundoInseminacao,
+    appBar: AppBar(
+      automaticallyImplyLeading: false,
+      backgroundColor: azulInseminacao,
+      foregroundColor: Colors.white,
+      title: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Image.asset(
+                'assets/img/logo-landscape-white.png',
+                height: 35,
+                fit: BoxFit.contain,
+              ),
+            ),
           ),
-        ),
-        centerTitle: true,
+          const Center(
+            child: Text(
+              'Inseminar',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
+      centerTitle: true,
+    ),
       body: Column(
         children: [
           Padding(
@@ -345,13 +364,6 @@ class _TelaInseminarState extends State<TelaInseminar> {
               ),
               _botaoMenu(
                 context,
-                Icons.person,
-                'PERFIL',
-                Colors.deepOrangeAccent,
-                const TelaPerfil(),
-              ),
-              _botaoMenu(
-                context,
                 Icons.history,
                 'HISTÓRICO',
                 Colors.purple,
@@ -363,6 +375,13 @@ class _TelaInseminarState extends State<TelaInseminar> {
                 'BAIXAS',
                 Colors.brown,
                 const TelaBaixas(),
+              ),
+              _botaoMenu(
+                context,
+                Icons.home,
+                'HOME',
+                Colors.white,
+                const MenuPrincipal(),
               ),
             ],
           ),
@@ -430,6 +449,73 @@ class _FormularioInseminarState extends State<FormularioInseminar> {
     }
   }
 
+  Future<bool> _googleCalendarAtivado(String usuarioId) async {
+    final documento = await FirebaseFirestore.instance
+        .collection('usuarios')
+        .doc(usuarioId)
+        .get();
+    // Usuários existentes continuam com a integração ativada por padrão.
+    return documento.data()?['usarGoogleCalendar'] != false;
+  }
+
+  Future<void> _perguntarAbrirGoogleCalendar({
+    required String usuarioId,
+    required String nomeVaca,
+    required String brinco,
+    required String dataInseminacao,
+    required String touro,
+  }) async {
+    bool ativado;
+    try {
+      ativado = await _googleCalendarAtivado(usuarioId);
+    } catch (_) {
+      return;
+    }
+    if (!mounted || !ativado) return;
+
+    final abrir = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Inseminação registrada'),
+        content: const Text(
+          'Deseja abrir o Google Calendar para criar um lembrete de '
+          'verificação de prenhez? A data sugerida será 45 dias após '
+          'a inseminação. Você poderá conferir e confirmar o evento no navegador.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: const Text('Agora não'),
+          ),
+          ElevatedButton.icon(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            icon: const Icon(Icons.calendar_month),
+            label: const Text('Abrir Google Calendar'),
+          ),
+        ],
+      ),
+    );
+
+    if (abrir != true || !mounted) return;
+    try {
+      await GoogleCalendarService.criarLembreteVerificacaoPrenhez(
+        nomeVaca: nomeVaca,
+        brinco: brinco,
+        dataInseminacao: dataInseminacao,
+        touro: touro,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível abrir o Google Calendar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   Future<void> _salvar() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -480,10 +566,12 @@ class _FormularioInseminarState extends State<FormularioInseminar> {
           dadosAtuais['brinco']?.toString() ?? '';
 
       String nomeTouro;
+      String? touroIdRegistro;
 
       if (_touroSelecionado == outroTouro) {
         nomeTouro = _outroTouroController.text.trim();
       } else {
+        touroIdRegistro = _touroSelecionado;
         final documentoTouro = await FirebaseFirestore.instance
             .collection('vacas')
             .doc(_touroSelecionado)
@@ -527,6 +615,8 @@ class _FormularioInseminarState extends State<FormularioInseminar> {
         'brinco': brinco,
         'dataInseminacao': dataInseminacao,
         'touro': nomeTouro,
+        'touroId': touroIdRegistro,
+        'touroExterno': _touroSelecionado == outroTouro,
         'dataRegistro': FieldValue.serverTimestamp(),
       });
 
@@ -534,19 +624,28 @@ class _FormularioInseminarState extends State<FormularioInseminar> {
       await referenciaVaca.update({
         'status': 'Inseminada',
         'dataInseminacao': dataInseminacao,
+        'ultimoTouroId': touroIdRegistro,
+        'ultimoTouro': nomeTouro,
       });
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text(
-            'Inseminação registrada com sucesso!',
-          ),
+          content: Text('Inseminação registrada com sucesso!'),
           backgroundColor: azulInseminacao,
         ),
       );
 
+      await _perguntarAbrirGoogleCalendar(
+        usuarioId: usuarioId,
+        nomeVaca: nome,
+        brinco: brinco,
+        dataInseminacao: dataInseminacao,
+        touro: nomeTouro,
+      );
+
+      if (!mounted) return;
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;

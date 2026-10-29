@@ -5,7 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'telavaca.dart';
 import 'telainseminar.dart' as inseminacao;
 import 'telaprenhez.dart';
-import 'telaperfil.dart';
+import 'menuprincipal.dart';
 import 'tela_historico.dart';
 import 'tela_baixas.dart';
 
@@ -155,10 +155,32 @@ class _TelaToqueState extends State<TelaToque> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text(
-          'Toque',
-          style: TextStyle(color: Colors.white),
+        title: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Image.asset(
+                  'assets/img/logo-landscape-white.png',
+                  height: 35,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            const Center(
+              child: Text(
+                'Toque',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
         ),
+        centerTitle: true,
         backgroundColor: Colors.orange,
         iconTheme: const IconThemeData(
           color: Colors.white,
@@ -261,10 +283,11 @@ class _TelaToqueState extends State<TelaToque> {
 
               return ListTile(
                 leading: Image.asset(
-                  imagemToque,
+                  imagemAnimal,
                   width: 40,
                   height: 40,
                   fit: BoxFit.contain,
+                  color: Colors.orange,
                 ),
                 title: Text(
                   nome,
@@ -341,10 +364,10 @@ class _TelaToqueState extends State<TelaToque> {
               ),
               _botaoMenu(
                 context,
-                Icons.person,
-                'PERFIL',
-                Colors.deepOrangeAccent,
-                const TelaPerfil(),
+                Icons.home,
+                'HOME',
+                Colors.white,
+                const MenuPrincipal(),
               ),
             ],
           ),
@@ -422,13 +445,94 @@ class _FormularioToqueState extends State<FormularioToque> {
         );
       }
 
-      await referencia.update({
+      final usuarioId = FirebaseAuth.instance.currentUser?.uid;
+      if (usuarioId == null) {
+        throw Exception('Sua sessão expirou. Entre novamente no aplicativo.');
+      }
+
+      final agora = DateTime.now();
+      final dataToque =
+          '${agora.year.toString().padLeft(4, '0')}-'
+          '${agora.month.toString().padLeft(2, '0')}-'
+          '${agora.day.toString().padLeft(2, '0')}';
+      final resultadoTexto = _estaPrenha! ? 'prenhe' : 'vazia';
+
+      // Localiza a inseminação desta vaca para registrar o resultado
+      // no histórico individual e permitir a contagem no histórico do touro.
+      final consultaInseminacoes = await FirebaseFirestore.instance
+          .collection('inseminacoes')
+          .where('usuarioId', isEqualTo: usuarioId)
+          .where('vacaId', isEqualTo: widget.id)
+          .get();
+
+      QueryDocumentSnapshot<Map<String, dynamic>>? inseminacaoAtual;
+      if (consultaInseminacoes.docs.isNotEmpty) {
+        final registros = consultaInseminacoes.docs.toList();
+        registros.sort((a, b) {
+          final dataA = a.data()['dataRegistro'];
+          final dataB = b.data()['dataRegistro'];
+          final millisA = dataA is Timestamp
+              ? dataA.millisecondsSinceEpoch
+              : 0;
+          final millisB = dataB is Timestamp
+              ? dataB.millisecondsSinceEpoch
+              : 0;
+          return millisB.compareTo(millisA);
+        });
+
+        // Se a data da inseminação atual estiver salva, tenta encontrar
+        // o registro correspondente antes de usar o mais recente.
+        final dataVaca = (dados['dataInseminacao'] ??
+                dados['ultimaInseminacao'] ?? '')
+            .toString()
+            .trim();
+        for (final registro in registros) {
+          final dataRegistro = (registro.data()['dataInseminacao'] ?? '')
+              .toString()
+              .trim();
+          if (dataVaca.isNotEmpty && dataRegistro == dataVaca) {
+            inseminacaoAtual = registro;
+            break;
+          }
+        }
+        inseminacaoAtual ??= registros.first;
+      }
+
+      final registroHistorico = <String, dynamic>{
+        'resultado': _estaPrenha!,
+        'statusResultado': resultadoTexto,
+        'data': dataToque,
+        'dataToque': dataToque,
+        'dataRegistro': Timestamp.fromDate(agora),
+        if (inseminacaoAtual != null)
+          'inseminacaoId': inseminacaoAtual.id,
+        if (inseminacaoAtual != null &&
+            inseminacaoAtual.data()['touro'] != null)
+          'touro': inseminacaoAtual.data()['touro'],
+        if (inseminacaoAtual != null &&
+            inseminacaoAtual.data()['touroId'] != null)
+          'touroId': inseminacaoAtual.data()['touroId'],
+      };
+
+      final lote = FirebaseFirestore.instance.batch();
+      lote.update(referencia, {
         'status': _estaPrenha! ? 'Prenhe' : 'Vazia',
-        'ultimoExameToque':
-            DateTime.now().toString().split(' ')[0],
-        'dataAtualizacao':
-            FieldValue.serverTimestamp(),
+        'ultimoExameToque': dataToque,
+        'historicoToques': FieldValue.arrayUnion([registroHistorico]),
+        'dataAtualizacao': FieldValue.serverTimestamp(),
       });
+
+      if (inseminacaoAtual != null) {
+        lote.update(inseminacaoAtual.reference, {
+          'resultado': _estaPrenha!,
+          'statusResultado': resultadoTexto,
+          'dataResultado': dataToque,
+          'dataExameToque': dataToque,
+          'atualizadoEm': FieldValue.serverTimestamp(),
+        });
+      }
+
+      await lote.commit();
 
       if (!mounted) return;
 

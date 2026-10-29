@@ -174,6 +174,80 @@ class _TelaPerfilState
     }
   }
 
+  Future<void> _alterarGoogleCalendar(bool ativado) async {
+    final usuario = FirebaseAuth.instance.currentUser;
+    if (usuario == null) return;
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('usuarios')
+          .doc(usuario.uid)
+          .set({
+        'usarGoogleCalendar': ativado,
+        'dataAtualizacao': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            ativado
+                ? 'Integração com Google Calendar ativada.'
+                : 'Integração com Google Calendar desativada.',
+          ),
+          backgroundColor: Colors.deepOrangeAccent,
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível salvar a preferência: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Widget _configuracaoGoogleCalendar(Map<String, dynamic> dados) {
+    final ativado = dados['usarGoogleCalendar'] != false;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Colors.black12,
+            blurRadius: 5,
+            offset: Offset(0, 2),
+          ),
+        ],
+      ),
+      child: SwitchListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+        secondary: Icon(
+          Icons.calendar_month,
+          color: ativado ? Colors.blueAccent : Colors.grey,
+          size: 30,
+        ),
+        title: const Text(
+          'Google Calendar',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          ativado
+              ? 'Ativado. Após registrar uma inseminação, você poderá abrir o calendário e confirmar o lembrete.'
+              : 'Desativado. O aplicativo não redirecionará para o Google Calendar.',
+        ),
+        value: ativado,
+        activeColor: Colors.blueAccent,
+        onChanged: _alterarGoogleCalendar,
+      ),
+    );
+  }
+
   Future<void> _sairDaConta() async {
     await FirebaseAuth.instance
         .signOut();
@@ -658,7 +732,7 @@ class _TelaPerfilState
               style:
               ElevatedButton.styleFrom(
                 backgroundColor:
-                Colors.blue,
+                Colors.green,
                 shape:
                 RoundedRectangleBorder(
                   borderRadius:
@@ -949,6 +1023,8 @@ class _TelaPerfilState
                 _formularioPerfil(
                   usuario,
                 ),
+                const SizedBox(height: 16),
+                _configuracaoGoogleCalendar(dados),
                 const SizedBox(
                   height: 20,
                 ),
@@ -958,7 +1034,7 @@ class _TelaPerfilState
           );
         },
       ),
-      bottomNavigationBar:
+      /*bottomNavigationBar:
       BottomAppBar(
         color: Colors.deepOrangeAccent,
         child:
@@ -1015,7 +1091,7 @@ class _TelaPerfilState
             ],
           ),
         ),
-      ),
+      ),*/
     );
   }
 }

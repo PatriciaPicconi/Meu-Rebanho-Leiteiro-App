@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class InfBaixas extends StatefulWidget {
   final Map<String, String> vaca;
@@ -11,6 +13,7 @@ class InfBaixas extends StatefulWidget {
 
 class _InfBaixasState extends State<InfBaixas> {
   bool _emEdicao = false;
+  bool _restaurando = false;
   late TextEditingController _nomeController;
   late TextEditingController _brincoController;
   late TextEditingController _motivoController;
@@ -34,6 +37,89 @@ class _InfBaixasState extends State<InfBaixas> {
     super.dispose();
   }
 
+
+  Future<void> _confirmarRestauracao() async {
+    final confirmar = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Cancelar a baixa?'),
+        content: Text(
+          'Confirma que a baixa de ${widget.vaca['nome'] ?? 'este animal'} foi registrada por engano ou que a venda foi cancelada? '
+          'O animal voltará a aparecer nas telas e nos gráficos do rebanho ativo.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Não, manter baixa'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.brown,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Sim, cancelar baixa'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmar != true) return;
+
+    final usuarioId = FirebaseAuth.instance.currentUser?.uid;
+    final vacaId = widget.vaca['vacaId'];
+
+    if (usuarioId == null || vacaId == null || vacaId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Não foi possível identificar o animal ou o usuário.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    setState(() => _restaurando = true);
+
+    try {
+      final referencia =
+          FirebaseFirestore.instance.collection('vacas').doc(vacaId);
+      final documento = await referencia.get();
+
+      if (!documento.exists || documento.data()?['usuarioId'] != usuarioId) {
+        throw Exception('Animal não encontrado na sua conta.');
+      }
+
+      await referencia.update({
+        'baixado': false,
+        'motivoBaixa': FieldValue.delete(),
+        'observacaoBaixa': FieldValue.delete(),
+        'dataBaixa': FieldValue.delete(),
+        'dataAtualizacao': FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Baixa cancelada. O animal voltou ao rebanho ativo.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Não foi possível cancelar a baixa: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) setState(() => _restaurando = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -42,7 +128,7 @@ class _InfBaixasState extends State<InfBaixas> {
           "Meu Rebanho Leiteiro",
           style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
-        backgroundColor: Colors.purple,
+        backgroundColor: Colors.brown,
         iconTheme: const IconThemeData(color: Colors.white),
         actions: [
           IconButton(
@@ -53,10 +139,6 @@ class _InfBaixasState extends State<InfBaixas> {
               });
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.account_circle, color: Colors.white, size: 30),
-            onPressed: () {},
-          ),
         ],
       ),
       body: SingleChildScrollView(
@@ -65,9 +147,17 @@ class _InfBaixasState extends State<InfBaixas> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Center(
-              child: CircleAvatar(
-                radius: 50,
-                backgroundImage: NetworkImage(widget.vaca['foto'] ?? 'https://via.placeholder.com/150'),
+              child: Image.asset(
+                ((widget.vaca['tipoAnimal'] ?? '').toLowerCase().contains('touro') ||
+                        (widget.vaca['tipoAnimal'] ?? '').toLowerCase().contains('macho'))
+                    ? 'assets/img/touro.png'
+                    : 'assets/img/animal.png',
+                width: 100,
+                height: 100,
+                fit: BoxFit.contain,
+                color: Colors.brown,
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.pets, size: 72, color: Colors.brown),
               ),
             ),
             const SizedBox(height: 25),
@@ -98,7 +188,7 @@ class _InfBaixasState extends State<InfBaixas> {
                 width: double.infinity,
                 height: 45,
                 child: ElevatedButton.icon(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.purple),
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.brown),
                   icon: const Icon(Icons.check, color: Colors.white),
                   label: const Text("SALVAR ALTERAÇÕES", style: TextStyle(color: Colors.white)),
                   onPressed: () {
@@ -108,7 +198,30 @@ class _InfBaixasState extends State<InfBaixas> {
                   },
                 ),
               )
-            ]
+            ],
+            const SizedBox(height: 28),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: ElevatedButton.icon(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.brown,
+                  foregroundColor: Colors.white,
+                ),
+                icon: _restaurando
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : const Icon(Icons.undo),
+                label: const Text('CANCELAR BAIXA / REGISTRADA POR ENGANO'),
+                onPressed: _restaurando ? null : _confirmarRestauracao,
+              ),
+            )
           ],
         ),
       ),
@@ -134,9 +247,9 @@ class _InfBaixasState extends State<InfBaixas> {
         ),
         decoration: InputDecoration(
           labelText: rotulo,
-          labelStyle: const TextStyle(color: Colors.purple),
+          labelStyle: const TextStyle(color: Colors.brown),
           disabledBorder: UnderlineInputBorder(borderSide: BorderSide(color: Colors.grey.shade300)),
-          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.purple)),
+          focusedBorder: const UnderlineInputBorder(borderSide: BorderSide(color: Colors.brown)),
         ),
       ),
     );

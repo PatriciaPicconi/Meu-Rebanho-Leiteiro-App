@@ -80,8 +80,6 @@ class _FormularioBaixasState extends State<FormularioBaixas> {
 
       if (!mounted) return;
 
-      // Fecha o formulário e devolve o resultado para a tela anterior.
-      // Não use o context deste formulário depois de fechá-lo.
       Navigator.of(context).pop(true);
     } catch (e) {
       if (!mounted) return;

@@ -6,8 +6,23 @@ import 'telainseminar.dart';
 import 'telatoque.dart';
 import 'telaprenhez.dart';
 import 'tela_baixas.dart';
-import 'telaperfil.dart';
+import 'menuprincipal.dart';
 import 'detalhe_historico.dart';
+
+
+bool _ehVacaAtivaParaHistorico(Map<String, dynamic> dados) {
+  if (dados['baixado'] == true) return false;
+
+
+  final statusBaixa = (dados['statusBaixa'] ?? '').toString().trim().toLowerCase();
+  final motivoBaixa = (dados['motivoBaixa'] ?? '').toString().trim().toLowerCase();
+  const termosBaixa = ['morte', 'morta', 'morto', 'falecida', 'falecido', 'venda', 'vendida', 'vendido', 'baixada', 'baixado'];
+  if (termosBaixa.contains(statusBaixa) || termosBaixa.contains(motivoBaixa)) {
+    return false;
+  }
+
+  return true;
+}
 
 class TelaHistorico extends StatefulWidget {
   const TelaHistorico({super.key});
@@ -28,6 +43,11 @@ class _TelaHistoricoState extends State<TelaHistorico> {
     super.dispose();
   }
 
+  bool _ehTouro(Map<String, dynamic> dados) {
+    final tipo = (dados['tipoAnimal'] ?? dados['tipo'] ?? dados['sexo'] ?? '').toString().trim().toLowerCase();
+    return tipo.contains('touro') || tipo == 'macho' || tipo == 'boi';
+  }
+
   Widget _botaoMenu(
       BuildContext context,
       IconData? icone,
@@ -46,10 +66,11 @@ class _TelaHistoricoState extends State<TelaHistorico> {
         children: [
           usarImagem
           ? Image.asset(
-              'img/animal.png',
+              'assets/img/animal.png',
               width: 22,
               height: 22,
               fit: BoxFit.contain,
+              /*color: Colors.purple,*/
             )
           : Icon(icone, color: corIcone, size: 22),
           const SizedBox(height: 4),
@@ -80,15 +101,34 @@ class _TelaHistoricoState extends State<TelaHistorico> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text(
-          "Histórico",
-          style: TextStyle(
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        backgroundColor: Colors.purple,
         automaticallyImplyLeading: false,
+        backgroundColor: Colors.purple,
+        foregroundColor: Colors.white,
+        title: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Image.asset(
+                  'assets/img/logo-landscape-white.png',
+                  height: 35,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            const Center(
+              child: Text(
+                'Histórico',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+          ],
+        ),
+        centerTitle: true,
       ),
 
       body: Column(
@@ -151,27 +191,19 @@ class _TelaHistoricoState extends State<TelaHistorico> {
                   );
                 }
 
-                if (!snapshot.hasData ||
-                    snapshot.data!.docs.isEmpty) {
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
                   return const Center(
-                    child: Text(
-                      "Nenhum registro encontrado para este usuário.",
-                    ),
+                    child: Text("Nenhum registro encontrado para este usuário."),
                   );
                 }
 
-                final docsFiltrados =
-                snapshot.data!.docs.where((doc) {
-                  final dados =
-                  doc.data() as Map<String, dynamic>;
+                final docsFiltrados = snapshot.data!.docs.where((doc) {
+                  final dados = doc.data() as Map<String, dynamic>;
 
-                  final nome = (dados['nome'] ?? '')
-                      .toString()
-                      .toLowerCase();
+                  if (!_ehVacaAtivaParaHistorico(dados)) return false;
 
-                  final brinco = (dados['brinco'] ?? '')
-                      .toString()
-                      .toLowerCase();
+                  final nome = (dados['nome'] ?? '').toString().toLowerCase();
+                  final brinco = (dados['brinco'] ?? '').toString().toLowerCase();
 
                   return nome.contains(_filtroNome) ||
                       brinco.contains(_filtroNome);
@@ -207,7 +239,10 @@ class _TelaHistoricoState extends State<TelaHistorico> {
 
                       child: ListTile(
                         leading: Image.asset(
-                          'assets/img/animal.png',
+                          ((vacaDados['tipoAnimal'] ?? vacaDados['tipo'] ?? vacaDados['sexo'] ?? '').toString().toLowerCase().contains('touro') ||
+                           (vacaDados['tipoAnimal'] ?? vacaDados['tipo'] ?? vacaDados['sexo'] ?? '').toString().toLowerCase().contains('macho'))
+                              ? 'assets/img/touro.png'
+                              : 'assets/img/animal.png',
                           width: 40,
                           height: 40,
                           fit: BoxFit.contain,
@@ -306,10 +341,10 @@ class _TelaHistoricoState extends State<TelaHistorico> {
 
               _botaoMenu(
                 context,
-                Icons.person,
-                'PERFIL',
-                Colors.deepOrangeAccent,
-                const TelaPerfil(),
+                Icons.home,
+                'HOME',
+                Colors.white,
+                const MenuPrincipal(),
               ),
             ],
           ),

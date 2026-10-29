@@ -164,7 +164,9 @@ class _FormularioState extends State<Formulario> {
               controller: _partoController,
               inputFormatters: [maskFormatter],
               decoration: const InputDecoration(
-                labelText: "Data do Último Parto (DD/MM/AAAA)",
+                labelText: "Data do Último Parto (opcional)",
+                hintText: "DD/MM/AAAA",
+                helperText: "Deixe em branco se não souber a data.",
                 border: OutlineInputBorder(),
               ),
               keyboardType: TextInputType.number,

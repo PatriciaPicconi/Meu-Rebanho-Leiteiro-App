@@ -15,6 +15,8 @@ class DetalheHistorico extends StatefulWidget {
 class _DetalheHistoricoState extends State<DetalheHistorico> {
   final _leiteController = TextEditingController();
   final _obsController = TextEditingController();
+  final _litrosMesController = TextEditingController();
+  final _anoMesController = TextEditingController();
 
   bool _editandoLeite = false;
   bool _editandoObs = false;
@@ -30,6 +32,9 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
   List<String> _filhosIds = [];
   List<String> _filhosNaoCadastrados = [];
   bool _relacoesInicializadas = false;
+  bool _mostrarGraficoProducao = false;
+  bool _mostrarGraficoPartos = false;
+  bool _mostrarListaProducaoOutros = false;
 
   static const String _naoCadastrado = '__nao_cadastrado__';
 
@@ -37,6 +42,8 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
   void dispose() {
     _leiteController.dispose();
     _obsController.dispose();
+    _litrosMesController.dispose();
+    _anoMesController.dispose();
     super.dispose();
   }
 
@@ -279,6 +286,98 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
     } finally {
       if (mounted) setState(() => _salvandoFilhos = false);
     }
+  }
+
+  bool _ehTouro(Map<String, dynamic> dados) {
+    final tipo = (dados['tipoAnimal'] ?? dados['tipo'] ?? dados['sexo'] ?? '').toString().trim().toLowerCase();
+    return tipo.contains('touro') || tipo == 'macho' || tipo == 'boi';
+  }
+
+  Future<void> _registrarProducaoMensal(Map<String, dynamic> dados) async {
+    final litros = double.tryParse(_litrosMesController.text.trim().replaceAll(',', '.'));
+    final mesAno = _anoMesController.text.trim();
+    if (litros == null || litros < 0 || !RegExp(r'^\d{2}/\d{4}$').hasMatch(mesAno)) {
+      _mensagem('Informe mês/ano no formato MM/AAAA e uma quantidade válida de litros.', erro: true);
+      return;
+    }
+    final mes = int.tryParse(mesAno.substring(0, 2)) ?? 0;
+    if (mes < 1 || mes > 12) {
+      _mensagem('O mês deve estar entre 01 e 12.', erro: true);
+      return;
+    }
+    try {
+      final ref = FirebaseFirestore.instance.collection('vacas').doc(widget.vacaId);
+      final snap = await ref.get();
+      final raw = snap.data()?['historicoProducaoLeite'];
+      final registros = raw is List ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+      final novo = <String, dynamic>{'mesAno': mesAno, 'litros': litros, 'encerrado': true};
+      final indice = registros.indexWhere((r) => r['mesAno']?.toString() == mesAno);
+      if (indice >= 0) { registros[indice] = novo; } else { registros.add(novo); }
+      registros.sort((a, b) => (a['mesAno'] ?? '').toString().split('/').reversed.join().compareTo((b['mesAno'] ?? '').toString().split('/').reversed.join()));
+      await ref.update({'historicoProducaoLeite': registros, 'producao_leite_mes': litros, 'dataAtualizacao': FieldValue.serverTimestamp()});
+      _litrosMesController.clear();
+      _anoMesController.clear();
+      _mensagem('Mês encerrado. Você já pode registrar outro mês.');
+    } catch (e) { _mensagem('Não foi possível registrar a produção: $e', erro: true); }
+  }
+
+  Widget _secaoProducaoMensal(Map<String, dynamic> dados) {
+    final raw = dados['historicoProducaoLeite'];
+    final registros = raw is List ? raw.whereType<Map>().map((e) => Map<String, dynamic>.from(e)).toList() : <Map<String, dynamic>>[];
+    registros.sort((a, b) => (b['mesAno'] ?? '').toString().compareTo((a['mesAno'] ?? '').toString()));
+    return Card(child: Padding(padding: const EdgeInsets.all(14), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      const Text('Produção de leite por mês', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.purple)),
+      const SizedBox(height: 8),
+      TextField(controller: _anoMesController, keyboardType: TextInputType.datetime, decoration: const InputDecoration(labelText: 'Mês e ano (MM/AAAA)', hintText: 'Ex.: 10/2026', border: OutlineInputBorder())),
+      const SizedBox(height: 8),
+      TextField(controller: _litrosMesController, keyboardType: const TextInputType.numberWithOptions(decimal: true), decoration: const InputDecoration(labelText: 'Quantidade em litros', border: OutlineInputBorder())),
+      const SizedBox(height: 8),
+      SizedBox(width: double.infinity, child: ElevatedButton.icon(style: ElevatedButton.styleFrom(backgroundColor: Colors.purple, foregroundColor: Colors.white), onPressed: () => _registrarProducaoMensal(dados), icon: const Icon(Icons.check_circle_outline), label: const Text('Encerrar mês e registrar'))),
+      const SizedBox(height: 8),
+      const Text('Meses registrados', style: TextStyle(fontWeight: FontWeight.bold)),
+      if (registros.isEmpty) const Text('Nenhum mês registrado ainda.'),
+      ...registros.map((r) { final v = r['litros'] is num ? (r['litros'] as num).toDouble() : double.tryParse((r['litros'] ?? '0').toString()) ?? 0.0; return ListTile(dense: true, contentPadding: EdgeInsets.zero, title: Text((r['mesAno'] ?? 'Não informado').toString()), trailing: Text('${v.toStringAsFixed(1)} L')); }),
+    ])));
+  }
+
+  Widget _buildDetalheTouro(Map<String, dynamic> dados, List<QueryDocumentSnapshot<Map<String, dynamic>>> animais) {
+    final nome = (dados['nome'] ?? 'Touro').toString();
+    final brinco = (dados['brinco'] ?? '--').toString();
+    final usuarioId = _usuarioId;
+    final rawFilhos = dados['filhosIds'];
+    final filhosIds = rawFilhos is List ? rawFilhos.map((e) => e.toString()).toList() : <String>[];
+    final rawExternos = dados['filhosNaoCadastrados'] ?? dados['filhosNaoCadascados'];
+    final filhosExternos = rawExternos is List ? rawExternos.map((e) => e.toString()).toList() : <String>[];
+    return SingleChildScrollView(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+      Center(child: Column(children: [Image.asset('assets/img/touro.png', width: 90, height: 90, fit: BoxFit.contain, errorBuilder: (c,e,s) => const Icon(Icons.pets, size: 80, color: Colors.purple)), const SizedBox(height: 8), Text(nome, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.purple)), Text('Brinco Nº: $brinco', style: TextStyle(color: Colors.purple.shade700, fontSize: 16))])),
+      const SizedBox(height: 16),
+      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Inseminações deste touro', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.purple)),
+        const SizedBox(height: 8),
+        if (usuarioId == null) const Text('Usuário não autenticado.') else StreamBuilder<QuerySnapshot<Map<String, dynamic>>>(stream: FirebaseFirestore.instance.collection('inseminacoes').where('usuarioId', isEqualTo: usuarioId).snapshots(), builder: (context, snap) {
+          if (snap.hasError) return const Text('Não foi possível carregar as inseminações.');
+          if (!snap.hasData) return const LinearProgressIndicator();
+          final touroNomeComBrinco = '$nome (Brinco: $brinco)';
+          final regs = snap.data!.docs.where((d) { final x=d.data(); return x['touroId']?.toString()==widget.vacaId || (x['touro'] ?? '').toString()==touroNomeComBrinco || (x['touro'] ?? '').toString()==nome; }).toList();
+          int sucesso=0, falha=0;
+          for (final reg in regs) { final id=(reg.data()['vacaId'] ?? '').toString(); final vacas=animais.where((a)=>a.id==id).toList(); if(vacas.isEmpty) continue; final dadosVaca=vacas.first.data(); final touroAtual=dadosVaca['ultimoTouroId']?.toString(); if(touroAtual != null && touroAtual.isNotEmpty && touroAtual != widget.vacaId) continue; final status=(dadosVaca['status'] ?? '').toString().toLowerCase(); if(status=='prenhe') sucesso++; else if(status=='vazia') falha++; }
+          return Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text('Total de inseminações: ${regs.length}'), Text('Sucesso (prenhez confirmada): $sucesso'), Text('Falha (vazia confirmada): $falha'), const SizedBox(height: 4), const Text('Os resultados refletem a situação reprodutiva atual das vacas inseminadas.')]);
+        }),
+      ]))),
+      const SizedBox(height: 12),
+      Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        const Text('Filhos registrados', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold, color: Colors.purple)),
+        const SizedBox(height: 8),
+        if (filhosIds.isEmpty && filhosExternos.isEmpty) const Text('Nenhum filho registrado até o momento.'),
+        ...filhosIds.map((id) { final achado=animais.where((a)=>a.id==id).toList(); final texto=achado.isEmpty ? 'Animal não disponível' : '${achado.first.data()['nome'] ?? 'Sem nome'} (brinco ${achado.first.data()['brinco'] ?? '--'})'; return Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Text('• $texto')); }),
+        ...filhosExternos.map((n)=>Padding(padding: const EdgeInsets.symmetric(vertical: 3), child: Text('• $n (fora da propriedade)'))),
+        Align(alignment: Alignment.centerRight, child: TextButton.icon(onPressed: () => setState(() => _editandoFilhos=true), icon: const Icon(Icons.edit), label: const Text('Editar filhos'))),
+        if (_editandoFilhos) ...[
+          TextButton.icon(onPressed: () => _selecionarFilhos(animais.where((a)=>a.id!=widget.vacaId).toList()), icon: const Icon(Icons.checklist), label: const Text('Selecionar animais ou outros')),
+          Align(alignment: Alignment.centerRight, child: Row(mainAxisAlignment: MainAxisAlignment.end, children: [IconButton(onPressed: () async { await _salvarFilhos(); if(mounted) setState(()=>_editandoFilhos=false); }, icon: const Icon(Icons.check, color: Colors.green)), IconButton(onPressed: ()=>setState(()=>_editandoFilhos=false), icon: const Icon(Icons.close, color: Colors.red))])),
+        ],
+      ]))),
+    ]));
   }
 
     Future<void> _salvarCampo(String campo, String valor) async {
@@ -559,38 +658,6 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
           ),
         ),
         const SizedBox(height: 8),
-        ...dados.map((item) {
-          final atual = item['id'] == widget.vacaId;
-
-          return Padding(
-            padding: const EdgeInsets.symmetric(vertical: 3),
-            child: Row(
-              children: [
-                Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: atual
-                        ? Colors.purple
-                        : Colors.blueGrey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    '${item['nome']} (brinco ${item['brinco']})${atual ? ' • animal em destaque' : ''}',
-                    style: TextStyle(
-                      fontWeight:
-                          atual ? FontWeight.bold : FontWeight.normal,
-                    ),
-                  ),
-                ),
-                Text('${(item['litros'] as double).toStringAsFixed(1)} L'),
-              ],
-            ),
-          );
-        }),
       ],
     );
   }
@@ -666,7 +733,7 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
               minY: 0,
               alignment: BarChartAlignment.spaceAround,
               groupsSpace: 12,
-              gridData: FlGridData(show: true, drawVerticalLine: false),
+              gridData: FlGridData(show: true, drawHorizontalLine: true, drawVerticalLine: false),
               borderData: FlBorderData(show: false),
               titlesData: FlTitlesData(
                 topTitles: const AxisTitles(
@@ -681,6 +748,7 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                 leftTitles: AxisTitles(
                   sideTitles: SideTitles(
                     showTitles: true,
+                    interval: 1,
                     reservedSize: 32,
                     getTitlesWidget: (value, meta) => Text(
                       value.toInt().toString(),
@@ -734,39 +802,41 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
           ),
         ),
         const SizedBox(height: 8),
-        ...dados.map((item) {
-          final atual = item['id'] == widget.vacaId;
-          return Container(
-            margin: const EdgeInsets.symmetric(vertical: 4),
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: atual ? Colors.purple.withOpacity(0.08) : null,
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(
-                color: atual ? Colors.purple : Colors.grey.shade300,
-              ),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  '${item['nome']} (brinco ${item['brinco']})'
-                  '${atual ? ' • animal em destaque' : ''}',
-                  style: TextStyle(
-                    fontWeight: atual ? FontWeight.bold : FontWeight.normal,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Prenhezes registradas: ${item['prenhezes']}  |  '
-                  'Partos com sucesso: ${item['sucessos']}  |  '
-                  'Partos falhos: ${item['falhos']}',
-                ),
-              ],
-            ),
-          );
-        }),
+
       ],
+    );
+  }
+
+  Widget _cartaoHistoricoToques(Map<String, dynamic> dados) {
+    final raw = dados['historicoToques'];
+    final registros = raw is List ? raw.whereType<Map>().toList() : <Map>[];
+    int sucesso = 0;
+    int falha = 0;
+    for (final registro in registros) {
+      final resultado = registro['resultado'];
+      if (resultado == true || resultado.toString().toLowerCase() == 'prenhe' || resultado.toString().toLowerCase() == 'sucesso') {
+        sucesso++;
+      } else if (resultado == false || resultado.toString().toLowerCase() == 'vazia' || resultado.toString().toLowerCase() == 'falha') {
+        falha++;
+      }
+    }
+    return Card(
+      margin: EdgeInsets.zero,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Histórico de toques', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.purple)),
+            const SizedBox(height: 8),
+            Text('Total de toques registrados: ${registros.length}'),
+            Text('Toques com prenhez confirmada: $sucesso'),
+            Text('Toques sem prenhez confirmada: $falha'),
+            if (registros.isEmpty)
+              const Text('Os exames anteriores não possuem histórico individual salvo. Os próximos exames serão contabilizados.'),
+          ],
+        ),
+      ),
     );
   }
 
@@ -845,7 +915,7 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
               .snapshots();
 
           final partosFalhos =
-              (dados['partos_falhos'] as num?)?.toInt() ?? 0;
+              dados['partos_falhos'] is num ? (dados['partos_falhos'] as num).toInt() : int.tryParse((dados['partos_falhos'] ?? '0').toString()) ?? 0;
 
           final producaoMedia = double.tryParse(
                 _leiteController.text.replaceAll(',', '.'),
@@ -868,6 +938,8 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                   doc.id:
                       '${doc.data()['nome'] ?? 'Sem nome'} (brinco ${doc.data()['brinco'] ?? '--'})',
               };
+
+              if (_ehTouro(dados)) return _buildDetalheTouro(dados, todosAnimais);
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -1144,6 +1216,8 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                       ),
                     ],
                     const SizedBox(height: 20),
+                    _secaoProducaoMensal(dados),
+                    const SizedBox(height: 16),
                     _campoEditavel(
                       titulo: 'Produção de Leite Deste Mês (Litros)',
                       controller: _leiteController,
@@ -1196,27 +1270,128 @@ class _DetalheHistoricoState extends State<DetalheHistorico> {
                       partosFalhos,
                     ),
                     const SizedBox(height: 30),
-                    const Text(
-                      'Comparação da Produção Leiteira:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
+                    const Text('Comparação da produção de leite', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple, fontSize: 16)),
+                    const SizedBox(height: 8),
                     _graficoProducao(todosAnimais),
-                    const SizedBox(height: 28),
-                    const Text(
-                      'Histórico de Prenhezes e Partos:',
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.purple,
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            title: const Text(
+                              'Informações de produção das outras vacas',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.purple,
+                              ),
+                            ),
+                            trailing: Icon(
+                              _mostrarListaProducaoOutros
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              color: Colors.purple,
+                            ),
+                            onTap: () => setState(() {
+                              _mostrarListaProducaoOutros =
+                                  !_mostrarListaProducaoOutros;
+                            }),
+                          ),
+                          if (_mostrarListaProducaoOutros)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                              child: Column(
+                                children: todosAnimais
+                                    .where((animal) =>
+                                        animal.id != widget.vacaId &&
+                                        !_ehTouro(animal.data()))
+                                    .map((animal) {
+                                  final animalDados = animal.data();
+                                  final valor = animalDados['producao_leite_mes'];
+                                  final litros = valor is num
+                                      ? valor.toDouble()
+                                      : double.tryParse(
+                                            (valor ?? '0').toString(),
+                                          ) ??
+                                          0.0;
+                                  return ListTile(
+                                    dense: true,
+                                    title: Text(
+                                      '${animalDados['nome'] ?? 'Sem nome'} '
+                                      '(brinco ${animalDados['brinco'] ?? '--'})',
+                                    ),
+                                    trailing: Text('${litros.toStringAsFixed(1)} L'),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
                       ),
                     ),
                     const SizedBox(height: 12),
                     _graficoPartos(todosAnimais),
+                    Card(
+                      margin: EdgeInsets.zero,
+                      child: Column(
+                        children: [
+                          ListTile(
+                            title: const Text(
+                              'Informações reprodutivas das outras vacas',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.purple,
+                              ),
+                            ),
+                            trailing: Icon(
+                              _mostrarGraficoPartos
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              color: Colors.purple,
+                            ),
+                            onTap: () => setState(() {
+                              _mostrarGraficoPartos = !_mostrarGraficoPartos;
+                            }),
+                          ),
+                          if (_mostrarGraficoPartos)
+                            Padding(
+                              padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+                              child: Column(
+                                children: todosAnimais
+                                    .where((animal) =>
+                                        animal.id != widget.vacaId &&
+                                        !_ehTouro(animal.data()))
+                                    .map((animal) {
+                                  final animalDados = animal.data();
+                                  final quantidade = animalDados['quantidade_prenhez'];
+                                  final sucessoValor = animalDados['partos_sucesso'];
+                                  final falhaValor = animalDados['partos_falhos'];
+                                  final prenhezes = quantidade is num
+                                      ? quantidade.toInt()
+                                      : int.tryParse((quantidade ?? '0').toString()) ?? 0;
+                                  final sucessos = sucessoValor is num
+                                      ? sucessoValor.toInt()
+                                      : int.tryParse((sucessoValor ?? '0').toString()) ?? 0;
+                                  final falhas = falhaValor is num
+                                      ? falhaValor.toInt()
+                                      : int.tryParse((falhaValor ?? '0').toString()) ?? 0;
+                                  return ListTile(
+                                    dense: true,
+                                    title: Text(
+                                      '${animalDados['nome'] ?? 'Sem nome'} '
+                                      '(brinco ${animalDados['brinco'] ?? '--'})',
+                                    ),
+                                    subtitle: Text(
+                                      'Prenhezes: $prenhezes | Partos com sucesso: '
+                                      '$sucessos | Falhas: $falhas',
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    _cartaoHistoricoToques(dados),
                   ],
                 ),
               );

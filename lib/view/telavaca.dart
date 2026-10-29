@@ -5,7 +5,7 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'telainseminar.dart';
 import 'telatoque.dart';
 import 'telaprenhez.dart';
-import 'telaperfil.dart';
+import 'menuprincipal.dart';
 import 'tela_historico.dart';
 import 'tela_baixas.dart';
 import 'tela_detalhe_vaca.dart';
@@ -313,7 +313,9 @@ class _TelaVacaState extends State<TelaVaca> {
                       controller: _partoController,
                       inputFormatters: [maskFormatter],
                       decoration: const InputDecoration(
-                        labelText: "Data do Último Parto",
+                        labelText: "Data do Último Parto (opcional)",
+                        hintText: "Deixe em branco se não souber",
+                        helperText: "Não é obrigatório para cadastrar o animal.",
                         prefixIcon: Icon(Icons.child_care),
                       ),
                       keyboardType: TextInputType.number,
@@ -399,9 +401,32 @@ class _TelaVacaState extends State<TelaVaca> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: const Text("Animal", style: TextStyle(color: Colors.white)),
         backgroundColor: Colors.green,
+        foregroundColor: Colors.white,
         iconTheme: const IconThemeData(color: Colors.white),
+        title: Stack(
+          alignment: Alignment.center,
+          children: [
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Padding(
+                padding: const EdgeInsets.only(left: 8),
+                child: Image.asset(
+                  'assets/img/logo-landscape-white.png',
+                  height: 35,
+                  fit: BoxFit.contain,
+                ),
+              ),
+            ),
+            const Center(
+              child: Text(
+                'Animal',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        centerTitle: true,
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(116),
           child: Padding(
@@ -556,7 +581,7 @@ class _TelaVacaState extends State<TelaVaca> {
                             'touro'
                         ? "Brinco: ${vaca['brinco'] ?? '--'}"
                         : "Brinco: ${vaca['brinco'] ?? '--'} | "
-                            "Parto: ${vaca['ultimoParto'] ?? '--'}",
+                            "Parto: ${((vaca['ultimoParto'] ?? '').toString().trim().isEmpty) ? 'Não informado' : vaca['ultimoParto']}",
                   ),
                   trailing: Text(
                     (vaca['tipoAnimal'] ?? 'vaca').toString().toLowerCase() ==
@@ -624,10 +649,10 @@ class _TelaVacaState extends State<TelaVaca> {
               ),
               _botaoMenu(
                 context,
-                Icons.person,
-                "PERFIL",
-                Colors.deepOrangeAccent,
-                const TelaPerfil(),
+                Icons.home,
+                'HOME',
+                Colors.white,
+                const MenuPrincipal(),
               ),
             ],
           ),
